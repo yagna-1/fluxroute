@@ -43,6 +43,13 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - Custom path: `make run MANIFEST_PATH=path/to/manifest.yaml`
 - CLI arg: `go run ./cmd/router path/to/manifest.yaml`
 
+## CLI commands
+
+- `make cli-run` runs via `cmd/cli run`
+- `make validate` validates manifest structure and DAG dependencies
+- `go run ./cmd/cli run configs/router.example.yaml`
+- `go run ./cmd/cli validate configs/router.example.yaml`
+
 ## Next implementation focus
 
 1. Fill `pkg/agentfunc` and `internal/agent` contracts fully.

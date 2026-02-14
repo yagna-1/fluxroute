@@ -1,11 +1,15 @@
 BINARY := bin/agent-router
+CLI_BINARY := bin/agent-router-cli
 GO ?= $(shell command -v go 2>/dev/null || echo $(HOME)/.local/go1.26.0/bin/go)
 MANIFEST_PATH ?=
 
-.PHONY: build test test-unit test-integ test-replay lint run clean
+.PHONY: build build-cli test test-unit test-integ test-replay lint run cli-run validate clean
 
 build:
 	CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o $(BINARY) ./cmd/router
+
+build-cli:
+	CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o $(CLI_BINARY) ./cmd/cli
 
 test: test-unit test-integ test-replay
 
@@ -23,6 +27,12 @@ lint:
 
 run:
 	$(GO) run ./cmd/router $(MANIFEST_PATH)
+
+cli-run:
+	$(GO) run ./cmd/cli run $(MANIFEST_PATH)
+
+validate:
+	$(GO) run ./cmd/cli validate $(MANIFEST_PATH)
 
 clean:
 	rm -rf bin
