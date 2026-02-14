@@ -90,13 +90,30 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> Closed
-    Closed --> Closed: success
-    Closed --> Open: failures >= threshold
-    Open --> HalfOpen: reset timeout elapsed
-    HalfOpen --> Closed: single probe success
-    HalfOpen --> Open: single probe failure / probe timeout
-    Open --> Open: requests short-circuited
+
+    state "Closed\n(normal traffic)" as Closed
+    state "Open\n(short-circuit)" as Open
+    state "Half-Open\n(single probe only)" as HalfOpen
+
+    Closed --> Closed: success\n(reset failure count)
+    Closed --> Open: failure count >= threshold
+    Open --> Open: request arrives before reset timeout\nreturn circuit open
+    Open --> HalfOpen: reset timeout elapsed\nallow exactly 1 probe
+    HalfOpen --> Closed: probe success
+    HalfOpen --> Open: probe failure or probe timeout
+```
+
+```mermaid
+flowchart TD
+    E[Agent returns error] --> A{AgentError Retryable=false?}
+    A -- Yes --> STOP[Stop retry loop]
+    A -- No --> B{RetryableErrs list provided?}
+    B -- No --> C[Retry by backoff policy]
+    B -- Yes --> D{error matches allow-list?}
+    D -- Yes --> C
+    D -- No --> STOP
 ```
 
 ## Quick start
