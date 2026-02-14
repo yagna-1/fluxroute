@@ -26,6 +26,7 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.4
+          install-mode: goinstall
           args: --timeout=5m
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
