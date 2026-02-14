@@ -49,6 +49,7 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `make validate` validates manifest structure and DAG dependencies
 - `TRACE_OUTPUT=trace.json make cli-run` records execution trace JSON
 - `make replay MANIFEST_PATH=trace.json` replays and compares outputs from a trace
+- `run` output now includes JSON invocation logs and metrics summary
 - `go run ./cmd/cli run configs/router.example.yaml`
 - `go run ./cmd/cli validate configs/router.example.yaml`
 - `go run ./cmd/cli replay trace.json`

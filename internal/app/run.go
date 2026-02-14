@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/your-org/agent-router/internal/agent"
 	"github.com/your-org/agent-router/internal/config"
+	"github.com/your-org/agent-router/internal/metrics"
 	"github.com/your-org/agent-router/internal/router"
 	"github.com/your-org/agent-router/internal/trace"
 	"github.com/your-org/agent-router/pkg/agentfunc"
@@ -22,6 +24,7 @@ import (
 type RunReport struct {
 	Results []router.AgentResult
 	Trace   trace.ExecutionTrace
+	Metrics metrics.Snapshot
 }
 
 // RunManifest loads a manifest, executes the pipeline, and writes a summary.
@@ -41,6 +44,12 @@ func RunManifest(manifestPath string, out io.Writer) error {
 		}
 		fmt.Fprintf(out, "- %s (%s): ok duration=%s\n", r.Invocation.ID, r.Invocation.AgentID, r.Output.Duration)
 	}
+	emitStructuredLogs(out, report)
+	fmt.Fprintf(out, "metrics total_invocations=%d errors=%d retries=%d\n",
+		report.Metrics.TotalInvocations,
+		report.Metrics.ErrorInvocations,
+		report.Metrics.RetryAttempts,
+	)
 	if failed > 0 {
 		return fmt.Errorf("pipeline completed with %d failed invocation(s)", failed)
 	}
@@ -71,6 +80,8 @@ func RunManifestReport(manifestPath string) (RunReport, error) {
 	}
 
 	engine := router.NewEngine(registry, runtimeCfg)
+	metricRecorder := metrics.NewInMemoryRecorder()
+	engine.SetMetricsRecorder(metricRecorder)
 	results, execTrace := engine.RunPlan(context.Background(), plan)
 
 	if tracePath := os.Getenv("TRACE_OUTPUT"); tracePath != "" {
@@ -79,7 +90,7 @@ func RunManifestReport(manifestPath string) (RunReport, error) {
 		}
 	}
 
-	return RunReport{Results: results, Trace: execTrace}, nil
+	return RunReport{Results: results, Trace: execTrace, Metrics: metricRecorder.Snapshot()}, nil
 }
 
 // ValidateManifest loads and validates a manifest only.
@@ -224,4 +235,32 @@ func uniqueAgentIDs(tr trace.ExecutionTrace) []string {
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+func emitStructuredLogs(out io.Writer, report RunReport) {
+	for _, r := range report.Results {
+		status := "success"
+		errText := ""
+		if r.Err != nil {
+			status = "error"
+			errText = r.Err.Error()
+		}
+
+		entry := map[string]any{
+			"level":       "info",
+			"ts":          time.Now().UTC().Format(time.RFC3339Nano),
+			"task_id":     r.Invocation.Input.TaskID,
+			"request_id":  r.Invocation.Input.RequestID,
+			"agent_id":    r.Invocation.AgentID,
+			"attempt":     1,
+			"duration_ms": r.Output.Duration.Milliseconds(),
+			"status":      status,
+		}
+		if errText != "" {
+			entry["error"] = errText
+		}
+		if b, err := json.Marshal(entry); err == nil {
+			fmt.Fprintln(out, string(b))
+		}
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/your-org/agent-router/internal/agent"
+	"github.com/your-org/agent-router/internal/metrics"
 	"github.com/your-org/agent-router/internal/retry"
 	"github.com/your-org/agent-router/internal/trace"
 	"github.com/your-org/agent-router/pkg/agentfunc"
@@ -45,6 +46,7 @@ type AgentResult struct {
 type Engine struct {
 	registry *agent.Registry
 	cfg      agentfunc.RouterConfig
+	metrics  metrics.Recorder
 }
 
 func NewEngine(registry *agent.Registry, cfg agentfunc.RouterConfig) *Engine {
@@ -63,7 +65,15 @@ func NewEngine(registry *agent.Registry, cfg agentfunc.RouterConfig) *Engine {
 	if cfg.RetryPolicy.Backoff == "" {
 		cfg.RetryPolicy.Backoff = agentfunc.BackoffLinear
 	}
-	return &Engine{registry: registry, cfg: cfg}
+	return &Engine{registry: registry, cfg: cfg, metrics: metrics.NoopRecorder{}}
+}
+
+func (e *Engine) SetMetricsRecorder(rec metrics.Recorder) {
+	if rec == nil {
+		e.metrics = metrics.NoopRecorder{}
+		return
+	}
+	e.metrics = rec
 }
 
 // Run executes invocations concurrently and returns deterministic ordering by invocation ID.
@@ -176,6 +186,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 	fn, ok := e.registry.Get(node.Invocation.AgentID)
 	if !ok {
 		err := fmt.Errorf("agent not registered: %s", node.Invocation.AgentID)
+		e.metrics.ObserveInvocation(node.Invocation.AgentID, "error", 0)
 		recorder.AddStep(trace.Step{
 			InvocationID: node.Invocation.ID,
 			AgentID:      node.Invocation.AgentID,
@@ -199,6 +210,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 			if out.Duration == 0 {
 				out.Duration = duration
 			}
+			e.metrics.ObserveInvocation(node.Invocation.AgentID, "success", out.Duration)
 			recorder.AddStep(trace.Step{
 				InvocationID: node.Invocation.ID,
 				AgentID:      node.Invocation.AgentID,
@@ -212,6 +224,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		}
 
 		lastErr = err
+		e.metrics.ObserveInvocation(node.Invocation.AgentID, "error", duration)
 		recorder.AddStep(trace.Step{
 			InvocationID: node.Invocation.ID,
 			AgentID:      node.Invocation.AgentID,
@@ -226,6 +239,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		if attempt == policy.MaxAttempts {
 			break
 		}
+		e.metrics.ObserveRetry(node.Invocation.AgentID)
 		select {
 		case <-ctx.Done():
 			return AgentResult{Invocation: node.Invocation, Err: ctx.Err()}
