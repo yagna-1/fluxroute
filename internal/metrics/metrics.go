@@ -9,6 +9,7 @@ import (
 type Recorder interface {
 	ObserveInvocation(agentID string, status string, duration time.Duration)
 	ObserveRetry(agentID string)
+	ObserveCircuitOpen(agentID string)
 }
 
 // NoopRecorder is default until Prometheus integration is added.
@@ -16,12 +17,14 @@ type NoopRecorder struct{}
 
 func (NoopRecorder) ObserveInvocation(string, string, time.Duration) {}
 func (NoopRecorder) ObserveRetry(string)                             {}
+func (NoopRecorder) ObserveCircuitOpen(string)                       {}
 
 // Snapshot contains aggregated in-memory runtime metrics.
 type Snapshot struct {
 	TotalInvocations int
 	ErrorInvocations int
 	RetryAttempts    int
+	CircuitOpens     int
 	ByAgent          map[string]AgentStats
 }
 
@@ -30,6 +33,7 @@ type AgentStats struct {
 	Successes     int
 	Errors        int
 	Retries       int
+	CircuitOpens  int
 	TotalDuration time.Duration
 }
 
@@ -40,6 +44,7 @@ type InMemoryRecorder struct {
 	total   int
 	errors  int
 	retries int
+	opens   int
 }
 
 func NewInMemoryRecorder() *InMemoryRecorder {
@@ -72,6 +77,16 @@ func (r *InMemoryRecorder) ObserveRetry(agentID string) {
 	r.retries++
 }
 
+func (r *InMemoryRecorder) ObserveCircuitOpen(agentID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	s := r.byAgent[agentID]
+	s.CircuitOpens++
+	r.byAgent[agentID] = s
+	r.opens++
+}
+
 func (r *InMemoryRecorder) Snapshot() Snapshot {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -84,6 +99,7 @@ func (r *InMemoryRecorder) Snapshot() Snapshot {
 		TotalInvocations: r.total,
 		ErrorInvocations: r.errors,
 		RetryAttempts:    r.retries,
+		CircuitOpens:     r.opens,
 		ByAgent:          byAgent,
 	}
 }

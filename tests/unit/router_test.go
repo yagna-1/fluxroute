@@ -3,10 +3,12 @@ package unit
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/your-org/agent-router/internal/agent"
+	"github.com/your-org/agent-router/internal/metrics"
 	"github.com/your-org/agent-router/internal/router"
 	"github.com/your-org/agent-router/pkg/agentfunc"
 )
@@ -124,5 +126,51 @@ func TestEngineRunPlanConvertsPanicToError(t *testing.T) {
 	}
 	if len(tr.Steps) != 1 || tr.Steps[0].Error == "" {
 		t.Fatalf("expected trace error for panic, trace=%+v", tr)
+	}
+}
+
+func TestEngineCircuitBreakerOpensAfterFailures(t *testing.T) {
+	reg := agent.NewRegistry()
+	_ = reg.Register("fail_agent", func(context.Context, agentfunc.AgentInput) (agentfunc.AgentOutput, error) {
+		return agentfunc.AgentOutput{}, errors.New("forced failure")
+	})
+
+	eng := router.NewEngine(reg, agentfunc.RouterConfig{
+		DefaultTimeout: time.Second,
+		RetryPolicy: agentfunc.RetryPolicy{
+			MaxAttempts: 1,
+			Backoff:     agentfunc.BackoffLinear,
+		},
+		CircuitBreaker: agentfunc.CircuitBreakerPolicy{
+			FailureThreshold: 1,
+			ResetTimeout:     time.Minute,
+		},
+	})
+	memMetrics := metrics.NewInMemoryRecorder()
+	eng.SetMetricsRecorder(memMetrics)
+
+	firstResults, _ := eng.RunPlan(context.Background(), router.ExecutionPlan{TaskID: "task_cb_1", Nodes: []router.PlanNode{{
+		Invocation: router.AgentInvocation{ID: "001", AgentID: "fail_agent", Input: agentfunc.AgentInput{RequestID: "req_1"}},
+	}}})
+	if len(firstResults) != 1 || firstResults[0].Err == nil {
+		t.Fatalf("expected first invocation failure, got %+v", firstResults)
+	}
+
+	secondResults, tr := eng.RunPlan(context.Background(), router.ExecutionPlan{TaskID: "task_cb_2", Nodes: []router.PlanNode{{
+		Invocation: router.AgentInvocation{ID: "001", AgentID: "fail_agent", Input: agentfunc.AgentInput{RequestID: "req_2"}},
+	}}})
+	if len(secondResults) != 1 || secondResults[0].Err == nil {
+		t.Fatalf("expected second invocation error, got %+v", secondResults)
+	}
+	if !strings.Contains(secondResults[0].Err.Error(), "circuit open") {
+		t.Fatalf("expected circuit open error, got %v", secondResults[0].Err)
+	}
+	if len(tr.Steps) == 0 || !strings.Contains(tr.Steps[0].Error, "circuit open") {
+		t.Fatalf("expected circuit-open trace step, got %+v", tr.Steps)
+	}
+
+	snap := memMetrics.Snapshot()
+	if snap.CircuitOpens != 1 {
+		t.Fatalf("expected one circuit open metric, got %d", snap.CircuitOpens)
 	}
 }

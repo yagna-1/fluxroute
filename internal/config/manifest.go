@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -29,14 +30,21 @@ type RouterSettings struct {
 
 // AgentBinding declares an agent registration entry.
 type AgentBinding struct {
-	ID    string      `yaml:"id"`
-	Retry RetryConfig `yaml:"retry"`
+	ID             string               `yaml:"id"`
+	Retry          RetryConfig          `yaml:"retry"`
+	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
 }
 
 // RetryConfig declares retry options for one agent.
 type RetryConfig struct {
 	MaxAttempts int    `yaml:"max_attempts"`
 	Backoff     string `yaml:"backoff"`
+}
+
+// CircuitBreakerConfig declares per-agent circuit breaker options.
+type CircuitBreakerConfig struct {
+	FailureThreshold int    `yaml:"failure_threshold"`
+	ResetTimeout     string `yaml:"reset_timeout"`
 }
 
 // PipelineStep is one node in the execution DAG.
@@ -81,6 +89,15 @@ func ValidateManifest(m Manifest) error {
 			return fmt.Errorf("manifest: duplicate agent id %q", a.ID)
 		}
 		agents[a.ID] = struct{}{}
+
+		if a.CircuitBreaker.FailureThreshold < 0 {
+			return fmt.Errorf("manifest: agent %q has negative circuit_breaker.failure_threshold", a.ID)
+		}
+		if a.CircuitBreaker.ResetTimeout != "" {
+			if _, err := time.ParseDuration(a.CircuitBreaker.ResetTimeout); err != nil {
+				return fmt.Errorf("manifest: agent %q has invalid circuit_breaker.reset_timeout: %w", a.ID, err)
+			}
+		}
 	}
 
 	steps := make(map[string]struct{}, len(m.Pipeline))

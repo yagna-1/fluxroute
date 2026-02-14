@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/your-org/agent-router/internal/agent"
 	"github.com/your-org/agent-router/internal/config"
 	"github.com/your-org/agent-router/internal/metrics"
@@ -50,6 +52,9 @@ func RunManifest(manifestPath string, out io.Writer) error {
 		report.Metrics.ErrorInvocations,
 		report.Metrics.RetryAttempts,
 	)
+	if report.Metrics.CircuitOpens > 0 {
+		fmt.Fprintf(out, "metrics circuit_opens=%d\n", report.Metrics.CircuitOpens)
+	}
 	if failed > 0 {
 		return fmt.Errorf("pipeline completed with %d failed invocation(s)", failed)
 	}
@@ -74,14 +79,36 @@ func RunManifestReport(manifestPath string) (RunReport, error) {
 		return RunReport{}, fmt.Errorf("build runtime config: %w", err)
 	}
 
-	plan, err := buildExecutionPlan(manifest)
+	plan, err := buildExecutionPlan(manifest, runtimeCfg.CircuitBreaker)
 	if err != nil {
 		return RunReport{}, err
 	}
 
 	engine := router.NewEngine(registry, runtimeCfg)
+	otelRuntime, err := trace.SetupOTelFromEnv("agent-router")
+	if err != nil {
+		return RunReport{}, fmt.Errorf("setup tracing: %w", err)
+	}
+	defer func() { _ = otelRuntime.Shutdown(context.Background()) }()
+	engine.SetTracer(otelRuntime.Tracer)
+
 	metricRecorder := metrics.NewInMemoryRecorder()
-	engine.SetMetricsRecorder(metricRecorder)
+	activeRecorder := metrics.Recorder(metricRecorder)
+	var metricsServer *http.Server
+	if envBool("METRICS_ENABLED") {
+		registry := prometheus.NewRegistry()
+		promRecorder, err := metrics.NewPrometheusRecorder(registry)
+		if err != nil {
+			return RunReport{}, fmt.Errorf("setup prometheus recorder: %w", err)
+		}
+		activeRecorder = metrics.NewMultiRecorder(metricRecorder, promRecorder)
+		metricsServer, err = metrics.StartPrometheusServer(metricsAddr(), registry)
+		if err != nil {
+			return RunReport{}, fmt.Errorf("start metrics endpoint: %w", err)
+		}
+		defer func() { _ = metrics.StopServer(context.Background(), metricsServer) }()
+	}
+	engine.SetMetricsRecorder(activeRecorder)
 	results, execTrace := engine.RunPlan(context.Background(), plan)
 
 	if tracePath := os.Getenv("TRACE_OUTPUT"); tracePath != "" {
@@ -175,15 +202,21 @@ func deterministicAgent(agentID string) agentfunc.AgentFunc {
 	}
 }
 
-func buildExecutionPlan(manifest config.Manifest) (router.ExecutionPlan, error) {
+func buildExecutionPlan(manifest config.Manifest, defaultCB agentfunc.CircuitBreakerPolicy) (router.ExecutionPlan, error) {
 	orderedSteps, err := config.OrderedPipeline(manifest)
 	if err != nil {
 		return router.ExecutionPlan{}, fmt.Errorf("order pipeline: %w", err)
 	}
 
 	retryByAgent := make(map[string]agentfunc.RetryPolicy, len(manifest.Agents))
+	cbByAgent := make(map[string]agentfunc.CircuitBreakerPolicy, len(manifest.Agents))
 	for _, a := range manifest.Agents {
 		retryByAgent[a.ID] = config.RetryPolicyFromConfig(a.Retry)
+		cbPolicy, err := config.CircuitBreakerPolicyFromConfig(a.CircuitBreaker, defaultCB)
+		if err != nil {
+			return router.ExecutionPlan{}, fmt.Errorf("agent %q circuit breaker policy: %w", a.ID, err)
+		}
+		cbByAgent[a.ID] = cbPolicy
 	}
 
 	invocationIDByStep := make(map[string]string, len(orderedSteps))
@@ -213,8 +246,9 @@ func buildExecutionPlan(manifest config.Manifest) (router.ExecutionPlan, error) 
 					Timestamp: time.Now(),
 				},
 			},
-			DependsOn:   depends,
-			RetryPolicy: retryByAgent[step.Step],
+			DependsOn:            depends,
+			RetryPolicy:          retryByAgent[step.Step],
+			CircuitBreakerPolicy: cbByAgent[step.Step],
 		})
 	}
 
@@ -263,4 +297,16 @@ func emitStructuredLogs(out io.Writer, report RunReport) {
 			fmt.Fprintln(out, string(b))
 		}
 	}
+}
+
+func envBool(key string) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	return v == "1" || v == "true" || v == "yes" || v == "on"
+}
+
+func metricsAddr() string {
+	if v := strings.TrimSpace(os.Getenv("METRICS_ADDR")); v != "" {
+		return v
+	}
+	return ":2112"
 }

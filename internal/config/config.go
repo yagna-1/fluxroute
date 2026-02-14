@@ -19,6 +19,10 @@ func FromEnv() agentfunc.RouterConfig {
 			MaxAttempts: 1,
 			Backoff:     agentfunc.BackoffLinear,
 		},
+		CircuitBreaker: agentfunc.CircuitBreakerPolicy{
+			FailureThreshold: 5,
+			ResetTimeout:     60 * time.Second,
+		},
 	}
 
 	if v := os.Getenv("WORKER_POOL_SIZE"); v != "" {
@@ -34,6 +38,16 @@ func FromEnv() agentfunc.RouterConfig {
 	if v := os.Getenv("DEFAULT_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			cfg.DefaultTimeout = d
+		}
+	}
+	if v := os.Getenv("CIRCUIT_FAILURE_THRESHOLD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			cfg.CircuitBreaker.FailureThreshold = n
+		}
+	}
+	if v := os.Getenv("CIRCUIT_RESET_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			cfg.CircuitBreaker.ResetTimeout = d
 		}
 	}
 
@@ -69,6 +83,28 @@ func RetryPolicyFromConfig(rc RetryConfig) agentfunc.RetryPolicy {
 		p.MaxAttempts = 1
 	}
 	return p
+}
+
+// CircuitBreakerPolicyFromConfig converts manifest circuit breaker settings into runtime policy.
+func CircuitBreakerPolicyFromConfig(cbc CircuitBreakerConfig, fallback agentfunc.CircuitBreakerPolicy) (agentfunc.CircuitBreakerPolicy, error) {
+	p := fallback
+	if cbc.FailureThreshold > 0 {
+		p.FailureThreshold = cbc.FailureThreshold
+	}
+	if cbc.ResetTimeout != "" {
+		d, err := time.ParseDuration(cbc.ResetTimeout)
+		if err != nil {
+			return agentfunc.CircuitBreakerPolicy{}, fmt.Errorf("invalid circuit breaker reset_timeout: %w", err)
+		}
+		p.ResetTimeout = d
+	}
+	if p.FailureThreshold < 0 {
+		p.FailureThreshold = 0
+	}
+	if p.ResetTimeout <= 0 {
+		p.ResetTimeout = 60 * time.Second
+	}
+	return p, nil
 }
 
 func parseBackoff(v string) agentfunc.BackoffStrategy {

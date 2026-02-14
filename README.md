@@ -17,6 +17,13 @@ It is intentionally scaffold-first: structure, contracts, and development guardr
 - `docs/end-user-goals.md`: product goals, target users, success criteria.
 - `docs/development-blueprint.md`: architecture contracts, runtime design, coding rules.
 - `docs/goal-to-dev-traceability.md`: mapping from customer outcomes to build tasks.
+- Runtime capabilities:
+  - Dependency-aware DAG execution
+  - Retry + circuit breaker resilience
+  - Deterministic trace recording and replay validation
+  - Structured JSON invocation logs
+  - In-memory metrics + Prometheus endpoint support
+  - OpenTelemetry spans per invocation
 - Go project scaffold:
   - `cmd/` router and CLI entrypoints
   - `internal/` runtime internals
@@ -54,6 +61,16 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `go run ./cmd/cli validate configs/router.example.yaml`
 - `go run ./cmd/cli replay trace.json`
 
+## Runtime env vars
+
+- `TRACE_ENABLED=true` enables OpenTelemetry tracing
+- `TRACE_ENDPOINT=host:4317` sends traces via OTLP/gRPC (if unset, stdout exporter is used)
+- `TRACE_OUTPUT=/tmp/run.trace.json` writes deterministic execution trace JSON
+- `METRICS_ENABLED=true` enables Prometheus metrics collection
+- `METRICS_ADDR=127.0.0.1:2112` metrics HTTP bind address (supports `:0`)
+- `WORKER_POOL_SIZE`, `CHANNEL_BUFFER`, `DEFAULT_TIMEOUT`
+- `CIRCUIT_FAILURE_THRESHOLD`, `CIRCUIT_RESET_TIMEOUT`
+
 ## Example manifests
 
 - `examples/simple-pipeline/manifest.yaml`
@@ -62,7 +79,7 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 
 ## Next implementation focus
 
-1. Fill `pkg/agentfunc` and `internal/agent` contracts fully.
-2. Implement router dispatcher/executor/aggregator in `internal/router`.
-3. Add deterministic replay recorder/runner in `internal/trace` and `tests/replay`.
-4. Add metrics/tracing adapters and manifest validation.
+1. Add real provider adapters in `pkg/adapters` (OpenAI, Anthropic, Gemini).
+2. Implement enterprise auth/security controls (mTLS, RBAC, audit export).
+3. Add benchmark suite against external frameworks.
+4. Design distributed coordination for multi-instance router deployments.

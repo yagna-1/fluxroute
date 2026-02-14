@@ -77,3 +77,22 @@ func TestOrderedPipelineDeterministic(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateManifestRejectsInvalidCircuitResetTimeout(t *testing.T) {
+	m := config.Manifest{
+		Agents: []config.AgentBinding{{
+			ID: "a",
+			CircuitBreaker: config.CircuitBreakerConfig{
+				FailureThreshold: 1,
+				ResetTimeout:     "not-a-duration",
+			},
+		}},
+		Pipeline: []config.PipelineStep{
+			{Step: "a"},
+		},
+	}
+
+	if err := config.ValidateManifest(m); err == nil {
+		t.Fatal("expected invalid circuit breaker duration error")
+	}
+}

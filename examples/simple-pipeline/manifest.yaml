@@ -8,10 +8,16 @@ agents:
     retry:
       max_attempts: 1
       backoff: linear
+    circuit_breaker:
+      failure_threshold: 3
+      reset_timeout: 30s
   - id: classify_agent
     retry:
       max_attempts: 1
       backoff: linear
+    circuit_breaker:
+      failure_threshold: 3
+      reset_timeout: 30s
 
 pipeline:
   - step: summarize_agent

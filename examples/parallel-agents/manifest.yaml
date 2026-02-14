@@ -8,14 +8,23 @@ agents:
     retry:
       max_attempts: 1
       backoff: linear
+    circuit_breaker:
+      failure_threshold: 2
+      reset_timeout: 20s
   - id: score_agent
     retry:
       max_attempts: 1
       backoff: linear
+    circuit_breaker:
+      failure_threshold: 2
+      reset_timeout: 20s
   - id: summarize_agent
     retry:
       max_attempts: 1
       backoff: linear
+    circuit_breaker:
+      failure_threshold: 2
+      reset_timeout: 20s
 
 pipeline:
   - step: enrich_agent

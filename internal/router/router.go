@@ -13,6 +13,10 @@ import (
 	"github.com/your-org/agent-router/internal/retry"
 	"github.com/your-org/agent-router/internal/trace"
 	"github.com/your-org/agent-router/pkg/agentfunc"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // AgentInvocation represents a single scheduled agent call.
@@ -24,9 +28,10 @@ type AgentInvocation struct {
 
 // PlanNode describes one invocation and its execution dependencies.
 type PlanNode struct {
-	Invocation  AgentInvocation
-	DependsOn   []string
-	RetryPolicy agentfunc.RetryPolicy
+	Invocation           AgentInvocation
+	DependsOn            []string
+	RetryPolicy          agentfunc.RetryPolicy
+	CircuitBreakerPolicy agentfunc.CircuitBreakerPolicy
 }
 
 // ExecutionPlan is the run-time DAG to execute.
@@ -47,6 +52,8 @@ type Engine struct {
 	registry *agent.Registry
 	cfg      agentfunc.RouterConfig
 	metrics  metrics.Recorder
+	breaker  *retry.CircuitBreaker
+	tracer   oteltrace.Tracer
 }
 
 func NewEngine(registry *agent.Registry, cfg agentfunc.RouterConfig) *Engine {
@@ -65,7 +72,19 @@ func NewEngine(registry *agent.Registry, cfg agentfunc.RouterConfig) *Engine {
 	if cfg.RetryPolicy.Backoff == "" {
 		cfg.RetryPolicy.Backoff = agentfunc.BackoffLinear
 	}
-	return &Engine{registry: registry, cfg: cfg, metrics: metrics.NoopRecorder{}}
+	if cfg.CircuitBreaker.ResetTimeout <= 0 {
+		cfg.CircuitBreaker.ResetTimeout = 60 * time.Second
+	}
+	if cfg.CircuitBreaker.FailureThreshold < 0 {
+		cfg.CircuitBreaker.FailureThreshold = 0
+	}
+	return &Engine{
+		registry: registry,
+		cfg:      cfg,
+		metrics:  metrics.NoopRecorder{},
+		breaker:  retry.NewCircuitBreaker(),
+		tracer:   otel.Tracer("agent-router"),
+	}
 }
 
 func (e *Engine) SetMetricsRecorder(rec metrics.Recorder) {
@@ -74,6 +93,14 @@ func (e *Engine) SetMetricsRecorder(rec metrics.Recorder) {
 		return
 	}
 	e.metrics = rec
+}
+
+func (e *Engine) SetTracer(t oteltrace.Tracer) {
+	if t == nil {
+		e.tracer = otel.Tracer("agent-router")
+		return
+	}
+	e.tracer = t
 }
 
 // Run executes invocations concurrently and returns deterministic ordering by invocation ID.
@@ -183,6 +210,14 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		policy.Backoff = agentfunc.BackoffLinear
 	}
 
+	cbPolicy := node.CircuitBreakerPolicy
+	if cbPolicy.FailureThreshold <= 0 {
+		cbPolicy = e.cfg.CircuitBreaker
+	}
+	if cbPolicy.ResetTimeout <= 0 {
+		cbPolicy.ResetTimeout = 60 * time.Second
+	}
+
 	fn, ok := e.registry.Get(node.Invocation.AgentID)
 	if !ok {
 		err := fmt.Errorf("agent not registered: %s", node.Invocation.AgentID)
@@ -198,9 +233,33 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		return AgentResult{Invocation: node.Invocation, Err: err}
 	}
 
+	if !e.breaker.Allow(node.Invocation.AgentID, cbPolicy, time.Now()) {
+		err := fmt.Errorf("circuit open: %s", node.Invocation.AgentID)
+		e.metrics.ObserveInvocation(node.Invocation.AgentID, "circuit_open", 0)
+		e.metrics.ObserveCircuitOpen(node.Invocation.AgentID)
+		recorder.AddStep(trace.Step{
+			InvocationID: node.Invocation.ID,
+			AgentID:      node.Invocation.AgentID,
+			RequestID:    node.Invocation.Input.RequestID,
+			Input:        node.Invocation.Input,
+			Error:        err.Error(),
+			Attempt:      0,
+		})
+		return AgentResult{Invocation: node.Invocation, Err: err}
+	}
+
 	var lastErr error
 	for attempt := 1; attempt <= policy.MaxAttempts; attempt++ {
 		runCtx, cancel := context.WithTimeout(ctx, e.cfg.DefaultTimeout)
+		runCtx, span := e.tracer.Start(runCtx, "agent.invoke",
+			oteltrace.WithAttributes(
+				attribute.String("task.id", node.Invocation.Input.TaskID),
+				attribute.String("request.id", node.Invocation.Input.RequestID),
+				attribute.String("invocation.id", node.Invocation.ID),
+				attribute.String("agent.id", node.Invocation.AgentID),
+				attribute.Int("agent.attempt", attempt),
+			),
+		)
 		started := time.Now()
 		out, err := safeCall(fn, runCtx, node.Invocation.Input)
 		cancel()
@@ -210,6 +269,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 			if out.Duration == 0 {
 				out.Duration = duration
 			}
+			e.breaker.RecordSuccess(node.Invocation.AgentID)
 			e.metrics.ObserveInvocation(node.Invocation.AgentID, "success", out.Duration)
 			recorder.AddStep(trace.Step{
 				InvocationID: node.Invocation.ID,
@@ -220,10 +280,13 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 				Duration:     duration,
 				Attempt:      attempt,
 			})
+			span.SetAttributes(attribute.String("status", "success"))
+			span.End()
 			return AgentResult{Invocation: node.Invocation, Output: out}
 		}
 
 		lastErr = err
+		e.breaker.RecordFailure(node.Invocation.AgentID, cbPolicy, time.Now())
 		e.metrics.ObserveInvocation(node.Invocation.AgentID, "error", duration)
 		recorder.AddStep(trace.Step{
 			InvocationID: node.Invocation.ID,
@@ -235,6 +298,10 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 			Duration:     duration,
 			Attempt:      attempt,
 		})
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("status", "error"))
+		span.End()
 
 		if attempt == policy.MaxAttempts {
 			break

@@ -41,10 +41,17 @@ type RetryPolicy struct {
 	RetryableErrs []error
 }
 
+// CircuitBreakerPolicy configures failure threshold and reset behavior.
+type CircuitBreakerPolicy struct {
+	FailureThreshold int
+	ResetTimeout     time.Duration
+}
+
 // RouterConfig is top-level runtime configuration.
 type RouterConfig struct {
 	WorkerPoolSize int
 	ChannelBuffer  int
 	DefaultTimeout time.Duration
 	RetryPolicy    RetryPolicy
+	CircuitBreaker CircuitBreakerPolicy
 }
