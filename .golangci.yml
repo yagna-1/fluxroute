@@ -16,6 +16,3 @@ linters:
 formatters:
   enable:
     - gofmt
-
-issues:
-  exclude-use-default: false
