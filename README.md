@@ -30,16 +30,13 @@
 
 ```mermaid
 %%{init: {
-  "theme": "base",
   "themeVariables": {
-    "fontSize": "22px",
-    "primaryTextColor": "#eaf6ff",
-    "lineColor": "#89b4d6"
+    "fontSize": "24px"
   },
   "flowchart": {
-    "diagramPadding": 24,
-    "nodeSpacing": 70,
-    "rankSpacing": 90,
+    "diagramPadding": 30,
+    "nodeSpacing": 82,
+    "rankSpacing": 100,
     "curve": "basis"
   }
 }}%%
@@ -78,21 +75,6 @@ flowchart LR
 ## Execution flow
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "themeVariables": {
-    "fontSize": "22px",
-    "primaryTextColor": "#eaf6ff",
-    "lineColor": "#89b4d6"
-  },
-  "sequence": {
-    "diagramMarginX": 30,
-    "diagramMarginY": 20,
-    "actorMargin": 80,
-    "messageMargin": 40,
-    "noteMargin": 20
-  }
-}}%%
 sequenceDiagram
     autonumber
     participant U as User/Caller
