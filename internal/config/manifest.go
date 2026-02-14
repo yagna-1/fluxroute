@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/your-org/agent-router/internal/security"
-	"github.com/your-org/agent-router/internal/tenant"
+	"github.com/your-org/fluxroute/internal/security"
+	"github.com/your-org/fluxroute/internal/tenant"
 	"gopkg.in/yaml.v3"
 )
 

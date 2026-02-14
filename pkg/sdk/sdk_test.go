@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 func TestRuntimeRunPlan(t *testing.T) {

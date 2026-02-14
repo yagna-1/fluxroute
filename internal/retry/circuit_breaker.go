@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // CircuitBreaker maintains per-agent breaker state.

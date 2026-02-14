@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/your-org/agent-router/internal/billing"
-	"github.com/your-org/agent-router/internal/security"
+	"github.com/your-org/fluxroute/internal/billing"
+	"github.com/your-org/fluxroute/internal/security"
 )
 
 type Service struct {

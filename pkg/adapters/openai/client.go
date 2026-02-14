@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/your-org/agent-router/pkg/adapters"
+	"github.com/your-org/fluxroute/pkg/adapters"
 )
 
 const defaultBaseURL = "https://api.openai.com"

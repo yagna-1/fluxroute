@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/your-org/agent-router/internal/audit"
+	"github.com/your-org/fluxroute/internal/audit"
 )
 
 func TestAuditExportJSONLToCSV(t *testing.T) {

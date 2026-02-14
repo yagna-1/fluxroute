@@ -3,7 +3,7 @@ package unit
 import (
 	"testing"
 
-	"github.com/your-org/agent-router/internal/config"
+	"github.com/your-org/fluxroute/internal/config"
 )
 
 func TestValidateManifest(t *testing.T) {

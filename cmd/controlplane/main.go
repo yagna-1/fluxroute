@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/your-org/agent-router/internal/controlplane"
-	"github.com/your-org/agent-router/internal/version"
+	"github.com/your-org/fluxroute/internal/controlplane"
+	"github.com/your-org/fluxroute/internal/version"
 )
 
 func main() {

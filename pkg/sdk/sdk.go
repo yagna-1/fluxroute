@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/your-org/agent-router/internal/agent"
-	"github.com/your-org/agent-router/internal/router"
-	intracetrace "github.com/your-org/agent-router/internal/trace"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/agent"
+	"github.com/your-org/fluxroute/internal/router"
+	intracetrace "github.com/your-org/fluxroute/internal/trace"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // Node defines one planned invocation in the SDK surface.

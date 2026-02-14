@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/your-org/agent-router/internal/app"
-	"github.com/your-org/agent-router/internal/audit"
-	"github.com/your-org/agent-router/internal/version"
+	"github.com/your-org/fluxroute/internal/app"
+	"github.com/your-org/fluxroute/internal/audit"
+	"github.com/your-org/fluxroute/internal/version"
 )
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 		}
 	case "debug":
 		if len(os.Args) < 4 {
-			fmt.Fprintln(os.Stderr, "usage: agent-router-cli debug <expected_trace> <actual_trace>")
+			fmt.Fprintln(os.Stderr, "usage: fluxroute-cli debug <expected_trace> <actual_trace>")
 			os.Exit(1)
 		}
 		if err := app.DebugTrace(os.Args[2], os.Args[3], os.Stdout); err != nil {
@@ -79,5 +79,5 @@ func main() {
 }
 
 func usage() {
-	fmt.Println("usage: agent-router-cli <run|validate|replay|audit-export|scaffold|debug|version> [path] [extra]")
+	fmt.Println("usage: fluxroute-cli <run|validate|replay|audit-export|scaffold|debug|version> [path] [extra]")
 }

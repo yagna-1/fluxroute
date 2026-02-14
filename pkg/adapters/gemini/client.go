@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/your-org/agent-router/pkg/adapters"
+	"github.com/your-org/fluxroute/pkg/adapters"
 )
 
 const defaultBaseURL = "https://generativelanguage.googleapis.com"

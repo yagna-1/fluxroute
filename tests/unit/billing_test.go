@@ -3,7 +3,7 @@ package unit
 import (
 	"testing"
 
-	"github.com/your-org/agent-router/internal/billing"
+	"github.com/your-org/fluxroute/internal/billing"
 )
 
 func TestRateCardInvoice(t *testing.T) {

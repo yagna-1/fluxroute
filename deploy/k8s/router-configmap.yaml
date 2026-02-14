@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: agent-router-config
-  namespace: agent-router
+  name: fluxroute-config
+  namespace: fluxroute
 data:
   ROUTER_ADDR: ":8080"
   ROUTER_TLS_ENABLED: "false"

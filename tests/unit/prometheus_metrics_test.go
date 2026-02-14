@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/your-org/agent-router/internal/metrics"
+	"github.com/your-org/fluxroute/internal/metrics"
 )
 
 func TestPrometheusRecorderAndEndpoint(t *testing.T) {
@@ -40,10 +40,10 @@ func TestPrometheusRecorderAndEndpoint(t *testing.T) {
 		t.Fatalf("read metrics body: %v", err)
 	}
 	text := string(body)
-	if !strings.Contains(text, "agent_router_invocations_total") {
+	if !strings.Contains(text, "fluxroute_invocations_total") {
 		t.Fatalf("missing invocations metric: %s", text)
 	}
-	if !strings.Contains(text, "agent_router_circuit_breaks_total") {
+	if !strings.Contains(text, "fluxroute_circuit_breaks_total") {
 		t.Fatalf("missing circuit metric: %s", text)
 	}
 }

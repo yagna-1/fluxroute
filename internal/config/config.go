@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/your-org/agent-router/internal/security"
-	"github.com/your-org/agent-router/internal/tenant"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/security"
+	"github.com/your-org/fluxroute/internal/tenant"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // FromEnv loads baseline runtime config from environment with safe defaults.

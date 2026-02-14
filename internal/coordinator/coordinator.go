@@ -71,7 +71,7 @@ type fileLease struct {
 
 func NewFileCoordinator(dir string) Coordinator {
 	if dir == "" {
-		dir = filepath.Join(os.TempDir(), "agent-router-coordination")
+		dir = filepath.Join(os.TempDir(), "fluxroute-coordination")
 	}
 	return &fileCoordinator{dir: dir}
 }

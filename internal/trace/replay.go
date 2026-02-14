@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // ResolveAgentFn resolves agent IDs to runtime implementations.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // Execute runs fn with a simple configurable retry policy.

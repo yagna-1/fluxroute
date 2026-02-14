@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/agent-router/internal/retry"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/retry"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 func TestCircuitBreakerOpensAndResets(t *testing.T) {

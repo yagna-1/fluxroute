@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/agent-router/internal/app"
-	"github.com/your-org/agent-router/internal/trace"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/app"
+	"github.com/your-org/fluxroute/internal/trace"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 func TestDebugTraceDetectsDivergence(t *testing.T) {

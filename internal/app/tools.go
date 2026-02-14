@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/your-org/agent-router/internal/scaffold"
-	"github.com/your-org/agent-router/internal/trace"
+	"github.com/your-org/fluxroute/internal/scaffold"
+	"github.com/your-org/fluxroute/internal/trace"
 )
 
 func ScaffoldProject(targetDir string, pipelineName string, out io.Writer) error {

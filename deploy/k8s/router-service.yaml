@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: agent-router
-  namespace: agent-router
+  name: fluxroute
+  namespace: fluxroute
 spec:
   selector:
-    app: agent-router
+    app: fluxroute
   ports:
     - name: http
       port: 8080

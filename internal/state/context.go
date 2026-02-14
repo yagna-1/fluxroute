@@ -4,7 +4,7 @@ import "context"
 
 type contextKey string
 
-const stateKey contextKey = "agent_router_state"
+const stateKey contextKey = "fluxroute_state"
 
 // Snapshot is immutable request-scoped state.
 type Snapshot struct {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // Recorder captures per-attempt trace steps and finalizes deterministic order.

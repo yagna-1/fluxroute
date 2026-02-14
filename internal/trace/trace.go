@@ -3,7 +3,7 @@ package trace
 import (
 	"time"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // ExecutionTrace captures the full run for replay/debug.

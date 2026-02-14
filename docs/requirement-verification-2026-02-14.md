@@ -40,7 +40,7 @@ Sources:
 - [x] Audit export SOC2-friendly CSV (`internal/audit/export.go`)
 - [x] Namespace isolation (`internal/tenant/namespace.go`)
 - [x] Distributed coordination (memory/file/Redis) (`internal/coordinator/*`)
-- [x] Enterprise observability dashboard assets (`deploy/observability/grafana/dashboards/agent-router-overview.json`)
+- [x] Enterprise observability dashboard assets (`deploy/observability/grafana/dashboards/fluxroute-overview.json`)
 - [x] SLA monitoring hook (`/sla` in control-plane)
 
 ### Q4 milestones (Section 11)

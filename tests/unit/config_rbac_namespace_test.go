@@ -3,8 +3,8 @@ package unit
 import (
 	"testing"
 
-	"github.com/your-org/agent-router/internal/config"
-	"github.com/your-org/agent-router/internal/security"
+	"github.com/your-org/fluxroute/internal/config"
+	"github.com/your-org/fluxroute/internal/security"
 )
 
 func TestRBACPolicyFromManifest(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/your-org/agent-router/internal/agent"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/agent"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 func TestRegistryRegisterAndGetDefaultVersion(t *testing.T) {

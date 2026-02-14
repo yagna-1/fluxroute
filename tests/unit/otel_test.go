@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/your-org/agent-router/internal/trace"
+	"github.com/your-org/fluxroute/internal/trace"
 )
 
 func TestSetupOTelFromEnv(t *testing.T) {
@@ -19,7 +19,7 @@ func TestSetupOTelFromEnv(t *testing.T) {
 	_ = os.Setenv("TRACE_ENABLED", "true")
 	_ = os.Setenv("TRACE_ENDPOINT", "")
 
-	rt, err := trace.SetupOTelFromEnv("agent-router-test")
+	rt, err := trace.SetupOTelFromEnv("fluxroute-test")
 	if err != nil {
 		t.Fatalf("setup otel: %v", err)
 	}

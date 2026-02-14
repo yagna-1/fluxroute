@@ -57,7 +57,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by(status) (rate(agent_router_invocations_total[1m]))",
+          "expr": "sum by(status) (rate(fluxroute_invocations_total[1m]))",
           "legendFormat": "{{status}}",
           "range": true,
           "refId": "A"
@@ -102,7 +102,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(agent_router_invocation_duration_seconds_bucket[5m])) by (le, agent_id))",
+          "expr": "histogram_quantile(0.99, sum(rate(fluxroute_invocation_duration_seconds_bucket[5m])) by (le, agent_id))",
           "legendFormat": "{{agent_id}}",
           "range": true,
           "refId": "A"
@@ -159,7 +159,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(agent_router_circuit_breaks_total[5m]))",
+          "expr": "sum(rate(fluxroute_circuit_breaks_total[5m]))",
           "refId": "A"
         }
       ],
@@ -201,7 +201,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by(agent_id) (rate(agent_router_retry_attempts_total[1m]))",
+          "expr": "sum by(agent_id) (rate(fluxroute_retry_attempts_total[1m]))",
           "legendFormat": "{{agent_id}}",
           "range": true,
           "refId": "A"
@@ -215,7 +215,7 @@
   "schemaVersion": 39,
   "style": "dark",
   "tags": [
-    "agent-router",
+    "fluxroute",
     "observability"
   ],
   "templating": {
@@ -227,8 +227,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Agent Router Overview",
-  "uid": "agent-router-overview",
+  "title": "FluxRoute Overview",
+  "uid": "fluxroute-overview",
   "version": 1,
   "weekStart": ""
 }

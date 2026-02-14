@@ -10,7 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/your-org/agent-router/internal/security"
+	"github.com/your-org/fluxroute/internal/security"
 )
 
 // PrometheusRecorder reports runtime metrics using Prometheus primitives.
@@ -28,20 +28,20 @@ func NewPrometheusRecorder(registry *prometheus.Registry) (*PrometheusRecorder, 
 
 	r := &PrometheusRecorder{
 		invocations: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "agent_router_invocations_total",
+			Name: "fluxroute_invocations_total",
 			Help: "Total number of agent invocations by status",
 		}, []string{"agent_id", "status"}),
 		durations: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "agent_router_invocation_duration_seconds",
+			Name:    "fluxroute_invocation_duration_seconds",
 			Help:    "Agent invocation latency in seconds",
 			Buckets: prometheus.DefBuckets,
 		}, []string{"agent_id"}),
 		retries: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "agent_router_retry_attempts_total",
+			Name: "fluxroute_retry_attempts_total",
 			Help: "Total retry attempts by agent",
 		}, []string{"agent_id"}),
 		circuitOpen: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "agent_router_circuit_breaks_total",
+			Name: "fluxroute_circuit_breaks_total",
 			Help: "Total circuit breaker open events by agent",
 		}, []string{"agent_id"}),
 	}

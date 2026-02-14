@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: agent-router-controlplane
-  namespace: agent-router
+  name: fluxroute-controlplane
+  namespace: fluxroute
 spec:
   selector:
-    app: agent-router-controlplane
+    app: fluxroute-controlplane
   ports:
     - name: http
       port: 8081

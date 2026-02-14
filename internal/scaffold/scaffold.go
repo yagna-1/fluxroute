@@ -64,7 +64,7 @@ pipeline:
 import (
 	"context"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 func %s(ctx context.Context, input agentfunc.AgentInput) (agentfunc.AgentOutput, error) {
@@ -88,7 +88,7 @@ func %s(ctx context.Context, input agentfunc.AgentInput) (agentfunc.AgentOutput,
 		return fmt.Errorf("write agent B stub: %w", err)
 	}
 
-	readme := fmt.Sprintf("# %s pipeline scaffold\n\nRun with:\n\n```bash\nagent-router-cli run manifests/pipeline.yaml\n```\n", pipelineName)
+	readme := fmt.Sprintf("# %s pipeline scaffold\n\nRun with:\n\n```bash\nfluxroute-cli run manifests/pipeline.yaml\n```\n", pipelineName)
 	if err := os.WriteFile(filepath.Join(targetDir, "README.md"), []byte(readme), 0o644); err != nil {
 		return fmt.Errorf("write scaffold README: %w", err)
 	}

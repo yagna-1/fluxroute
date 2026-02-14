@@ -14,15 +14,15 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/your-org/agent-router/internal/agent"
-	"github.com/your-org/agent-router/internal/audit"
-	"github.com/your-org/agent-router/internal/config"
-	"github.com/your-org/agent-router/internal/coordinator"
-	"github.com/your-org/agent-router/internal/metrics"
-	"github.com/your-org/agent-router/internal/router"
-	"github.com/your-org/agent-router/internal/security"
-	"github.com/your-org/agent-router/internal/trace"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/agent"
+	"github.com/your-org/fluxroute/internal/audit"
+	"github.com/your-org/fluxroute/internal/config"
+	"github.com/your-org/fluxroute/internal/coordinator"
+	"github.com/your-org/fluxroute/internal/metrics"
+	"github.com/your-org/fluxroute/internal/router"
+	"github.com/your-org/fluxroute/internal/security"
+	"github.com/your-org/fluxroute/internal/trace"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // RunReport captures the outputs from one manifest execution.
@@ -120,7 +120,7 @@ func RunManifestReport(manifestPath string) (report RunReport, retErr error) {
 	}
 
 	engine := router.NewEngine(registry, runtimeCfg)
-	otelRuntime, err := trace.SetupOTelFromEnv("agent-router")
+	otelRuntime, err := trace.SetupOTelFromEnv("fluxroute")
 	if err != nil {
 		return RunReport{}, fmt.Errorf("setup tracing: %w", err)
 	}

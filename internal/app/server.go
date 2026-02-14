@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/your-org/agent-router/internal/security"
+	"github.com/your-org/fluxroute/internal/security"
 )
 
 func RouterHandler() http.Handler {

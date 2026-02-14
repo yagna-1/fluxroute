@@ -27,7 +27,7 @@ func NewRedisCoordinator(redisURL string, prefix string) (Coordinator, error) {
 		return nil, fmt.Errorf("redis url is empty")
 	}
 	if prefix == "" {
-		prefix = "agent-router"
+		prefix = "fluxroute"
 	}
 
 	opt, err := redis.ParseURL(redisURL)

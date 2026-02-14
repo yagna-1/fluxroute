@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/agent-router/internal/coordinator"
+	"github.com/your-org/fluxroute/internal/coordinator"
 )
 
 func TestMemoryCoordinatorAcquireRelease(t *testing.T) {

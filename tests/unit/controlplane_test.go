@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/your-org/agent-router/internal/controlplane"
+	"github.com/your-org/fluxroute/internal/controlplane"
 )
 
 func TestControlplaneHandler(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 var (

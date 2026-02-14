@@ -1,4 +1,4 @@
-module github.com/your-org/agent-router
+module github.com/your-org/fluxroute
 
 go 1.24.0
 

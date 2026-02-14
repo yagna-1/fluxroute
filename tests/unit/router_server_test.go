@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/your-org/agent-router/internal/app"
+	"github.com/your-org/fluxroute/internal/app"
 )
 
 func TestRouterHandlerHealthAndReady(t *testing.T) {

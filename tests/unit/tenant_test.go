@@ -3,7 +3,7 @@ package unit
 import (
 	"testing"
 
-	"github.com/your-org/agent-router/internal/tenant"
+	"github.com/your-org/fluxroute/internal/tenant"
 )
 
 func TestNamespaceNormalizeValidate(t *testing.T) {

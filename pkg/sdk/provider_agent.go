@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/your-org/agent-router/pkg/adapters"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/pkg/adapters"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 // PromptPayload is the expected payload shape for adapter-backed agents.

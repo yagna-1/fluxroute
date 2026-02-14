@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/agent-router/internal/metrics"
+	"github.com/your-org/fluxroute/internal/metrics"
 )
 
 func TestInMemoryRecorderSnapshot(t *testing.T) {

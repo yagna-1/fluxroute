@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/agent-router/internal/agent"
-	"github.com/your-org/agent-router/internal/router"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/agent"
+	"github.com/your-org/fluxroute/internal/router"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 )
 
 func BenchmarkEngineRunPlan_Sequential10(b *testing.B) {

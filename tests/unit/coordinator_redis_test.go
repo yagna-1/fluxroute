@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/your-org/agent-router/internal/coordinator"
+	"github.com/your-org/fluxroute/internal/coordinator"
 )
 
 func TestRedisCoordinatorAcquireRelease(t *testing.T) {

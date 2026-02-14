@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/agent-router/internal/app"
+	"github.com/your-org/fluxroute/internal/app"
 )
 
 func TestAppValidateManifest(t *testing.T) {

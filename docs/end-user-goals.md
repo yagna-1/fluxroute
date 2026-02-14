@@ -12,7 +12,7 @@ Current agent frameworks are hard to trust in production due to:
 
 ## Product promise
 
-Agent Router should provide:
+FluxRoute should provide:
 - Deterministic multi-agent orchestration
 - Explicit and traceable execution
 - High concurrency with bounded backpressure

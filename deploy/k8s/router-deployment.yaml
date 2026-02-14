@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agent-router
-  namespace: agent-router
+  name: fluxroute
+  namespace: fluxroute
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: agent-router
+      app: fluxroute
   template:
     metadata:
       labels:
-        app: agent-router
+        app: fluxroute
     spec:
       containers:
         - name: router
-          image: agent-router:dev
+          image: fluxroute:dev
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           envFrom:
             - configMapRef:
-                name: agent-router-config
+                name: fluxroute-config
           ports:
             - containerPort: 8080
               name: http

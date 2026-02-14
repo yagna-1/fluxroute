@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agent-router-controlplane
-  namespace: agent-router
+  name: fluxroute-controlplane
+  namespace: fluxroute
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: agent-router-controlplane
+      app: fluxroute-controlplane
   template:
     metadata:
       labels:
-        app: agent-router-controlplane
+        app: fluxroute-controlplane
     spec:
       containers:
         - name: controlplane
-          image: agent-router-controlplane:dev
+          image: fluxroute-controlplane:dev
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
-                name: agent-router-controlplane-config
+                name: fluxroute-controlplane-config
           ports:
             - containerPort: 8081
               name: http

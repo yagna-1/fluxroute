@@ -1,4 +1,4 @@
-# Agent Router Implementation
+# FluxRoute Implementation
 
 This directory is a repo-ready implementation built from:
 - `../AgentRouter_YC_Report_Full.txt` (end-user/business goals)
@@ -25,7 +25,7 @@ This directory is a repo-ready implementation built from:
 ## Quick start
 
 ```bash
-cd agent-router-implementation
+cd <repo-root>
 ~/.local/go1.26.0/bin/go mod tidy
 make test
 make build
@@ -84,14 +84,14 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
   - `METRICS_TLS_REQUIRE_CLIENT_CERT=true`
 - Security and audit:
   - `REQUEST_ROLE=viewer|operator|admin`
-  - `AUDIT_LOG_PATH=/tmp/agent-router.audit.log`
+  - `AUDIT_LOG_PATH=/tmp/fluxroute.audit.log`
 - Coordination:
   - `COORDINATION_ENABLED=true`
   - `COORDINATION_MODE=file|memory|redis`
-  - `COORDINATION_DIR=/tmp/agent-router-coordination`
+  - `COORDINATION_DIR=/tmp/fluxroute-coordination`
   - `COORDINATION_TTL=2m`
   - `COORDINATION_REDIS_URL=redis://localhost:6379/0`
-  - `COORDINATION_REDIS_PREFIX=agent-router`
+  - `COORDINATION_REDIS_PREFIX=fluxroute`
 - Router server TLS:
   - `ROUTER_ADDR=:8080`
   - `ROUTER_TLS_ENABLED=true`

@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/agent-router/internal/agent"
-	"github.com/your-org/agent-router/internal/metrics"
-	"github.com/your-org/agent-router/internal/retry"
-	"github.com/your-org/agent-router/internal/trace"
-	"github.com/your-org/agent-router/pkg/agentfunc"
+	"github.com/your-org/fluxroute/internal/agent"
+	"github.com/your-org/fluxroute/internal/metrics"
+	"github.com/your-org/fluxroute/internal/retry"
+	"github.com/your-org/fluxroute/internal/trace"
+	"github.com/your-org/fluxroute/pkg/agentfunc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -83,7 +83,7 @@ func NewEngine(registry *agent.Registry, cfg agentfunc.RouterConfig) *Engine {
 		cfg:      cfg,
 		metrics:  metrics.NoopRecorder{},
 		breaker:  retry.NewCircuitBreaker(),
-		tracer:   otel.Tracer("agent-router"),
+		tracer:   otel.Tracer("fluxroute"),
 	}
 }
 
@@ -97,7 +97,7 @@ func (e *Engine) SetMetricsRecorder(rec metrics.Recorder) {
 
 func (e *Engine) SetTracer(t oteltrace.Tracer) {
 	if t == nil {
-		e.tracer = otel.Tracer("agent-router")
+		e.tracer = otel.Tracer("fluxroute")
 		return
 	}
 	e.tracer = t

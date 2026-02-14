@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/agent-router/pkg/adapters"
+	"github.com/your-org/fluxroute/pkg/adapters"
 )
 
 func TestGenerate(t *testing.T) {

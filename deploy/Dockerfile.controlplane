@@ -4,8 +4,8 @@ COPY . .
 ARG VERSION=dev
 ARG COMMIT=none
 ARG BUILD_DATE=unknown
-RUN CGO_ENABLED=0 go build -ldflags="-s -w -X github.com/your-org/agent-router/internal/version.Version=${VERSION} -X github.com/your-org/agent-router/internal/version.Commit=${COMMIT} -X github.com/your-org/agent-router/internal/version.BuildDate=${BUILD_DATE}" -o /bin/agent-router-controlplane ./cmd/controlplane
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X github.com/your-org/fluxroute/internal/version.Version=${VERSION} -X github.com/your-org/fluxroute/internal/version.Commit=${COMMIT} -X github.com/your-org/fluxroute/internal/version.BuildDate=${BUILD_DATE}" -o /bin/fluxroute-controlplane ./cmd/controlplane
 
 FROM scratch
-COPY --from=builder /bin/agent-router-controlplane /agent-router-controlplane
-ENTRYPOINT ["/agent-router-controlplane"]
+COPY --from=builder /bin/fluxroute-controlplane /fluxroute-controlplane
+ENTRYPOINT ["/fluxroute-controlplane"]
