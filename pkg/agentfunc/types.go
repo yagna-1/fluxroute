@@ -45,6 +45,7 @@ type RetryPolicy struct {
 type CircuitBreakerPolicy struct {
 	FailureThreshold int
 	ResetTimeout     time.Duration
+	ProbeTimeout     time.Duration
 }
 
 // RouterConfig is top-level runtime configuration.

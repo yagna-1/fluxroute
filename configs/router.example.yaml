@@ -17,6 +17,7 @@ agents:
     circuit_breaker:
       failure_threshold: 5
       reset_timeout: 60s
+      probe_timeout: 5s
 
   - id: classify_agent
     retry:
@@ -25,6 +26,7 @@ agents:
     circuit_breaker:
       failure_threshold: 5
       reset_timeout: 60s
+      probe_timeout: 5s
 
 pipeline:
   - step: summarize_agent

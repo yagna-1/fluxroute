@@ -24,6 +24,7 @@ func FromEnv() agentfunc.RouterConfig {
 		CircuitBreaker: agentfunc.CircuitBreakerPolicy{
 			FailureThreshold: 5,
 			ResetTimeout:     60 * time.Second,
+			ProbeTimeout:     5 * time.Second,
 		},
 	}
 
@@ -50,6 +51,11 @@ func FromEnv() agentfunc.RouterConfig {
 	if v := os.Getenv("CIRCUIT_RESET_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			cfg.CircuitBreaker.ResetTimeout = d
+		}
+	}
+	if v := os.Getenv("CIRCUIT_PROBE_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			cfg.CircuitBreaker.ProbeTimeout = d
 		}
 	}
 
@@ -100,11 +106,21 @@ func CircuitBreakerPolicyFromConfig(cbc CircuitBreakerConfig, fallback agentfunc
 		}
 		p.ResetTimeout = d
 	}
+	if cbc.ProbeTimeout != "" {
+		d, err := time.ParseDuration(cbc.ProbeTimeout)
+		if err != nil {
+			return agentfunc.CircuitBreakerPolicy{}, fmt.Errorf("invalid circuit breaker probe_timeout: %w", err)
+		}
+		p.ProbeTimeout = d
+	}
 	if p.FailureThreshold < 0 {
 		p.FailureThreshold = 0
 	}
 	if p.ResetTimeout <= 0 {
 		p.ResetTimeout = 60 * time.Second
+	}
+	if p.ProbeTimeout <= 0 {
+		p.ProbeTimeout = 5 * time.Second
 	}
 	return p, nil
 }

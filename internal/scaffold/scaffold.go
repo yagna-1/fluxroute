@@ -44,6 +44,7 @@ agents:
     circuit_breaker:
       failure_threshold: 3
       reset_timeout: 30s
+      probe_timeout: 5s
   - id: %s
     retry:
       max_attempts: 1
@@ -51,6 +52,7 @@ agents:
     circuit_breaker:
       failure_threshold: 3
       reset_timeout: 30s
+      probe_timeout: 5s
 
 pipeline:
   - step: %s

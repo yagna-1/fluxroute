@@ -57,6 +57,7 @@ type RetryConfig struct {
 type CircuitBreakerConfig struct {
 	FailureThreshold int    `yaml:"failure_threshold"`
 	ResetTimeout     string `yaml:"reset_timeout"`
+	ProbeTimeout     string `yaml:"probe_timeout"`
 }
 
 // PipelineStep is one node in the execution DAG.
@@ -126,6 +127,11 @@ func ValidateManifest(m Manifest) error {
 		if a.CircuitBreaker.ResetTimeout != "" {
 			if _, err := time.ParseDuration(a.CircuitBreaker.ResetTimeout); err != nil {
 				return fmt.Errorf("manifest: agent %q has invalid circuit_breaker.reset_timeout: %w", a.ID, err)
+			}
+		}
+		if a.CircuitBreaker.ProbeTimeout != "" {
+			if _, err := time.ParseDuration(a.CircuitBreaker.ProbeTimeout); err != nil {
+				return fmt.Errorf("manifest: agent %q has invalid circuit_breaker.probe_timeout: %w", a.ID, err)
 			}
 		}
 	}

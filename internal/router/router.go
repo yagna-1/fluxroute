@@ -75,6 +75,9 @@ func NewEngine(registry *agent.Registry, cfg agentfunc.RouterConfig) *Engine {
 	if cfg.CircuitBreaker.ResetTimeout <= 0 {
 		cfg.CircuitBreaker.ResetTimeout = 60 * time.Second
 	}
+	if cfg.CircuitBreaker.ProbeTimeout <= 0 {
+		cfg.CircuitBreaker.ProbeTimeout = 5 * time.Second
+	}
 	if cfg.CircuitBreaker.FailureThreshold < 0 {
 		cfg.CircuitBreaker.FailureThreshold = 0
 	}
@@ -217,6 +220,9 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 	if cbPolicy.ResetTimeout <= 0 {
 		cbPolicy.ResetTimeout = 60 * time.Second
 	}
+	if cbPolicy.ProbeTimeout <= 0 {
+		cbPolicy.ProbeTimeout = 5 * time.Second
+	}
 
 	fn, ok := e.registry.Get(node.Invocation.AgentID)
 	if !ok {
@@ -233,24 +239,29 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		return AgentResult{Invocation: node.Invocation, Err: err}
 	}
 
-	if !e.breaker.Allow(node.Invocation.AgentID, cbPolicy, time.Now()) {
-		err := fmt.Errorf("circuit open: %s", node.Invocation.AgentID)
-		e.metrics.ObserveInvocation(node.Invocation.AgentID, "circuit_open", 0)
-		e.metrics.ObserveCircuitOpen(node.Invocation.AgentID)
-		recorder.AddStep(trace.Step{
-			InvocationID: node.Invocation.ID,
-			AgentID:      node.Invocation.AgentID,
-			RequestID:    node.Invocation.Input.RequestID,
-			Input:        node.Invocation.Input,
-			Error:        err.Error(),
-			Attempt:      0,
-		})
-		return AgentResult{Invocation: node.Invocation, Err: err}
-	}
-
 	var lastErr error
 	for attempt := 1; attempt <= policy.MaxAttempts; attempt++ {
-		runCtx, cancel := context.WithTimeout(ctx, e.cfg.DefaultTimeout)
+		allow, halfOpenProbe := e.breaker.Allow(node.Invocation.AgentID, cbPolicy, time.Now())
+		if !allow {
+			err := retry.NonRetryable(fmt.Errorf("%w: %s", retry.ErrCircuitOpen, node.Invocation.AgentID))
+			e.metrics.ObserveInvocation(node.Invocation.AgentID, "circuit_open", 0)
+			e.metrics.ObserveCircuitOpen(node.Invocation.AgentID)
+			recorder.AddStep(trace.Step{
+				InvocationID: node.Invocation.ID,
+				AgentID:      node.Invocation.AgentID,
+				RequestID:    node.Invocation.Input.RequestID,
+				Input:        node.Invocation.Input,
+				Error:        err.Error(),
+				Attempt:      attempt,
+			})
+			return AgentResult{Invocation: node.Invocation, Err: err}
+		}
+
+		timeout := e.cfg.DefaultTimeout
+		if halfOpenProbe && cbPolicy.ProbeTimeout > 0 && cbPolicy.ProbeTimeout < timeout {
+			timeout = cbPolicy.ProbeTimeout
+		}
+		runCtx, cancel := context.WithTimeout(ctx, timeout)
 		runCtx, span := e.tracer.Start(runCtx, "agent.invoke",
 			oteltrace.WithAttributes(
 				attribute.String("task.id", node.Invocation.Input.TaskID),
@@ -264,6 +275,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		out, err := safeCall(fn, runCtx, node.Invocation.Input)
 		cancel()
 		duration := time.Since(started)
+		err = normalizeInvocationError(err)
 
 		if err == nil {
 			if out.Duration == 0 {
@@ -303,7 +315,7 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 		span.SetAttributes(attribute.String("status", "error"))
 		span.End()
 
-		if attempt == policy.MaxAttempts {
+		if attempt == policy.MaxAttempts || !shouldRetry(err, policy) {
 			break
 		}
 		e.metrics.ObserveRetry(node.Invocation.AgentID)
@@ -320,10 +332,45 @@ func (e *Engine) executeNode(ctx context.Context, node PlanNode, recorder *trace
 func safeCall(fn agentfunc.AgentFunc, ctx context.Context, in agentfunc.AgentInput) (out agentfunc.AgentOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("agent panic: %v", r)
+			err = retry.NonRetryable(fmt.Errorf("%w: %v", retry.ErrAgentPanic, r))
 		}
 	}()
 	return fn(ctx, in)
+}
+
+func normalizeInvocationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%w: %v", retry.ErrAgentTimeout, err)
+	}
+	return err
+}
+
+func shouldRetry(err error, policy agentfunc.RetryPolicy) bool {
+	if err == nil {
+		return false
+	}
+
+	var ae retry.AgentError
+	if errors.As(err, &ae) {
+		return ae.Retryable
+	}
+
+	if errors.Is(err, context.Canceled) {
+		return false
+	}
+
+	if len(policy.RetryableErrs) == 0 {
+		return true
+	}
+	for _, target := range policy.RetryableErrs {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+	return false
 }
 
 func dependencyError(node PlanNode, graph planGraph, results map[string]AgentResult) error {

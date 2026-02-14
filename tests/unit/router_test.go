@@ -162,15 +162,121 @@ func TestEngineCircuitBreakerOpensAfterFailures(t *testing.T) {
 	if len(secondResults) != 1 || secondResults[0].Err == nil {
 		t.Fatalf("expected second invocation error, got %+v", secondResults)
 	}
-	if !strings.Contains(secondResults[0].Err.Error(), "circuit open") {
+	if !strings.Contains(secondResults[0].Err.Error(), "circuit breaker open") {
 		t.Fatalf("expected circuit open error, got %v", secondResults[0].Err)
 	}
-	if len(tr.Steps) == 0 || !strings.Contains(tr.Steps[0].Error, "circuit open") {
+	if len(tr.Steps) == 0 || !strings.Contains(tr.Steps[0].Error, "circuit breaker open") {
 		t.Fatalf("expected circuit-open trace step, got %+v", tr.Steps)
 	}
 
 	snap := memMetrics.Snapshot()
 	if snap.CircuitOpens != 1 {
 		t.Fatalf("expected one circuit open metric, got %d", snap.CircuitOpens)
+	}
+}
+
+func TestEngineRetryableErrorsFilterBypassesRetry(t *testing.T) {
+	reg := agent.NewRegistry()
+	permanentErr := errors.New("permanent")
+	attempts := 0
+	_ = reg.Register("maybe_fail", func(context.Context, agentfunc.AgentInput) (agentfunc.AgentOutput, error) {
+		attempts++
+		if attempts == 1 {
+			return agentfunc.AgentOutput{}, permanentErr
+		}
+		return agentfunc.AgentOutput{RequestID: "req_ok", Payload: []byte("ok")}, nil
+	})
+
+	eng := router.NewEngine(reg, agentfunc.RouterConfig{
+		DefaultTimeout: time.Second,
+		RetryPolicy: agentfunc.RetryPolicy{
+			MaxAttempts:   3,
+			Backoff:       agentfunc.BackoffLinear,
+			RetryableErrs: []error{errors.New("transient")},
+		},
+	})
+
+	results, _ := eng.RunPlan(context.Background(), router.ExecutionPlan{
+		TaskID: "task_retry_filter",
+		Nodes: []router.PlanNode{{
+			Invocation: router.AgentInvocation{ID: "001", AgentID: "maybe_fail", Input: agentfunc.AgentInput{RequestID: "req_1"}},
+			RetryPolicy: agentfunc.RetryPolicy{
+				MaxAttempts:   3,
+				Backoff:       agentfunc.BackoffLinear,
+				RetryableErrs: []error{errors.New("transient")},
+			},
+		}},
+	})
+
+	if len(results) != 1 {
+		t.Fatalf("expected one result, got %d", len(results))
+	}
+	if results[0].Err == nil {
+		t.Fatal("expected failure for non-retryable error")
+	}
+	if attempts != 1 {
+		t.Fatalf("expected exactly one attempt, got %d", attempts)
+	}
+}
+
+func TestEngineHalfOpenProbeTimeoutReopensCircuit(t *testing.T) {
+	reg := agent.NewRegistry()
+	calls := 0
+	_ = reg.Register("probe_agent", func(ctx context.Context, _ agentfunc.AgentInput) (agentfunc.AgentOutput, error) {
+		calls++
+		if calls == 1 {
+			return agentfunc.AgentOutput{}, errors.New("initial failure")
+		}
+		select {
+		case <-ctx.Done():
+			return agentfunc.AgentOutput{}, ctx.Err()
+		case <-time.After(80 * time.Millisecond):
+			return agentfunc.AgentOutput{RequestID: "req_probe", Payload: []byte("ok")}, nil
+		}
+	})
+
+	eng := router.NewEngine(reg, agentfunc.RouterConfig{
+		DefaultTimeout: time.Second,
+		RetryPolicy: agentfunc.RetryPolicy{
+			MaxAttempts: 1,
+			Backoff:     agentfunc.BackoffLinear,
+		},
+		CircuitBreaker: agentfunc.CircuitBreakerPolicy{
+			FailureThreshold: 1,
+			ResetTimeout:     5 * time.Millisecond,
+			ProbeTimeout:     10 * time.Millisecond,
+		},
+	})
+
+	// First call fails and opens circuit.
+	first, _ := eng.RunPlan(context.Background(), router.ExecutionPlan{TaskID: "task_probe_1", Nodes: []router.PlanNode{{
+		Invocation: router.AgentInvocation{ID: "001", AgentID: "probe_agent", Input: agentfunc.AgentInput{RequestID: "req_1"}},
+	}}})
+	if len(first) != 1 || first[0].Err == nil {
+		t.Fatalf("expected first failure to open circuit, got %+v", first)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+
+	// Second call is half-open probe, should timeout by ProbeTimeout and reopen.
+	second, _ := eng.RunPlan(context.Background(), router.ExecutionPlan{TaskID: "task_probe_2", Nodes: []router.PlanNode{{
+		Invocation: router.AgentInvocation{ID: "001", AgentID: "probe_agent", Input: agentfunc.AgentInput{RequestID: "req_2"}},
+	}}})
+	if len(second) != 1 || second[0].Err == nil {
+		t.Fatalf("expected half-open probe timeout, got %+v", second)
+	}
+	if !strings.Contains(second[0].Err.Error(), "agent timeout") {
+		t.Fatalf("expected agent timeout from probe, got %v", second[0].Err)
+	}
+
+	// Immediate next call should short-circuit open.
+	third, _ := eng.RunPlan(context.Background(), router.ExecutionPlan{TaskID: "task_probe_3", Nodes: []router.PlanNode{{
+		Invocation: router.AgentInvocation{ID: "001", AgentID: "probe_agent", Input: agentfunc.AgentInput{RequestID: "req_3"}},
+	}}})
+	if len(third) != 1 || third[0].Err == nil {
+		t.Fatalf("expected circuit open after failed probe, got %+v", third)
+	}
+	if !strings.Contains(third[0].Err.Error(), "circuit breaker open") {
+		t.Fatalf("expected circuit breaker open error, got %v", third[0].Err)
 	}
 }

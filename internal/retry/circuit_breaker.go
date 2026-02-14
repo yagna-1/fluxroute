@@ -16,33 +16,40 @@ type CircuitBreaker struct {
 type circuitState struct {
 	consecutiveFailures int
 	openUntil           time.Time
+	halfOpenProbeActive bool
 }
 
 func NewCircuitBreaker() *CircuitBreaker {
 	return &CircuitBreaker{states: make(map[string]circuitState)}
 }
 
-func (cb *CircuitBreaker) Allow(agentID string, policy agentfunc.CircuitBreakerPolicy, now time.Time) bool {
+// Allow decides whether a request should proceed.
+// The second return value indicates whether the request is a half-open probe.
+func (cb *CircuitBreaker) Allow(agentID string, policy agentfunc.CircuitBreakerPolicy, now time.Time) (bool, bool) {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
 	if policy.FailureThreshold <= 0 {
-		return true
+		return true, false
 	}
 
 	s := cb.states[agentID]
+	if s.halfOpenProbeActive {
+		return false, false
+	}
 	if s.openUntil.IsZero() {
-		return true
+		return true, false
 	}
 	if now.Before(s.openUntil) {
-		return false
+		return false, false
 	}
 
-	// Half-open transition: allow a trial request and reset counters.
+	// Half-open transition: allow exactly one trial request.
 	s.openUntil = time.Time{}
 	s.consecutiveFailures = 0
+	s.halfOpenProbeActive = true
 	cb.states[agentID] = s
-	return true
+	return true, true
 }
 
 func (cb *CircuitBreaker) RecordSuccess(agentID string) {
@@ -52,6 +59,7 @@ func (cb *CircuitBreaker) RecordSuccess(agentID string) {
 	s := cb.states[agentID]
 	s.consecutiveFailures = 0
 	s.openUntil = time.Time{}
+	s.halfOpenProbeActive = false
 	cb.states[agentID] = s
 }
 
@@ -67,10 +75,19 @@ func (cb *CircuitBreaker) RecordFailure(agentID string, policy agentfunc.Circuit
 	}
 
 	s := cb.states[agentID]
+	if s.halfOpenProbeActive {
+		s.openUntil = now.Add(policy.ResetTimeout)
+		s.consecutiveFailures = 0
+		s.halfOpenProbeActive = false
+		cb.states[agentID] = s
+		return
+	}
+
 	s.consecutiveFailures++
 	if s.consecutiveFailures >= policy.FailureThreshold {
 		s.openUntil = now.Add(policy.ResetTimeout)
 		s.consecutiveFailures = 0
+		s.halfOpenProbeActive = false
 	}
 	cb.states[agentID] = s
 }

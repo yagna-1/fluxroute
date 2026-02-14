@@ -16,7 +16,7 @@ Sources:
 ### Q1 milestones (Section 11)
 
 - [x] Retry policy engine
-- [x] Circuit breaker implementation
+- [x] Circuit breaker implementation (closed/open/half-open with single probe + probe timeout)
 - [x] Initial benchmark suite (`tests/bench/router_benchmark_test.go`)
 - [x] Deterministic replay recorder + runner (`internal/trace/recorder.go`, `internal/trace/replay.go`)
 - [x] Integration test suite baseline (`tests/integration/integration_test.go`)

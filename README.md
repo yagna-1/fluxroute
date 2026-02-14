@@ -16,7 +16,7 @@
 
 - Deterministic DAG execution with replay validation.
 - Explicit state, strict manifest validation, and no hidden framework magic.
-- Built-in resilience: retry + circuit breaker + panic containment.
+- Built-in resilience: retry filtering, circuit breaker with half-open probe timeout, and panic containment.
 - Production-friendly observability: JSON logs, OpenTelemetry, Prometheus, audit export.
 - Enterprise primitives: RBAC, namespace isolation, coordination leases, control-plane APIs.
 
@@ -94,8 +94,9 @@ stateDiagram-v2
     Closed --> Closed: success
     Closed --> Open: failures >= threshold
     Open --> HalfOpen: reset timeout elapsed
-    HalfOpen --> Closed: probe success
-    HalfOpen --> Open: probe failure
+    HalfOpen --> Closed: single probe success
+    HalfOpen --> Open: single probe failure / probe timeout
+    Open --> Open: requests short-circuited
 ```
 
 ## Quick start
@@ -126,6 +127,7 @@ make run
 | Benchmark router paths | `make bench` |
 | Observability stack up/down | `make trace-view` / `make trace-down` |
 | Validate/apply k8s manifests | `make k8s-validate` / `make k8s-apply` |
+| Delete k8s manifests | `make k8s-delete` |
 
 ## API surface
 
@@ -178,6 +180,9 @@ flowchart TB
 - Metrics: `METRICS_ENABLED`, `METRICS_ADDR`, `METRICS_TLS_*`
 - Security: `REQUEST_ROLE`, `AUDIT_LOG_PATH`
 - Coordination: `COORDINATION_ENABLED`, `COORDINATION_MODE`, `COORDINATION_REDIS_URL`
+- Resilience:
+  - `CIRCUIT_FAILURE_THRESHOLD`, `CIRCUIT_RESET_TIMEOUT`, `CIRCUIT_PROBE_TIMEOUT`
+  - `retry.retryable_errs` behavior via `RetryPolicy.RetryableErrs` in runtime API
 - Router TLS: `ROUTER_TLS_ENABLED`, `ROUTER_TLS_*`
 - Control-plane TLS: `CONTROLPLANE_TLS_ENABLED`, `CONTROLPLANE_TLS_*`
 

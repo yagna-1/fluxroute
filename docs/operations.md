@@ -38,6 +38,7 @@ Recommended local env for router telemetry:
 - `TRACE_ENDPOINT=localhost:4317`
 - `METRICS_ENABLED=true`
 - `METRICS_ADDR=0.0.0.0:2112`
+- `CIRCUIT_PROBE_TIMEOUT=5s`
 
 ## Linting
 
