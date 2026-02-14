@@ -29,6 +29,20 @@
 ## Architecture
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontSize": "22px",
+    "primaryTextColor": "#eaf6ff",
+    "lineColor": "#89b4d6"
+  },
+  "flowchart": {
+    "diagramPadding": 24,
+    "nodeSpacing": 70,
+    "rankSpacing": 90,
+    "curve": "basis"
+  }
+}}%%
 flowchart LR
     C[Client / SDK / CLI] --> API[Router API\n/run /validate /replay]
     API --> CFG[Manifest + RBAC + Namespace]
@@ -64,6 +78,21 @@ flowchart LR
 ## Execution flow
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontSize": "22px",
+    "primaryTextColor": "#eaf6ff",
+    "lineColor": "#89b4d6"
+  },
+  "sequence": {
+    "diagramMarginX": 30,
+    "diagramMarginY": 20,
+    "actorMargin": 80,
+    "messageMargin": 40,
+    "noteMargin": 20
+  }
+}}%%
 sequenceDiagram
     autonumber
     participant U as User/Caller
