@@ -24,6 +24,8 @@ It is intentionally scaffold-first: structure, contracts, and development guardr
   - Structured JSON invocation logs
   - In-memory metrics + Prometheus endpoint support
   - OpenTelemetry spans per invocation
+  - Provider adapters for OpenAI, Anthropic, and Gemini
+  - SDK runtime API and provider-to-agent helper
 - Go project scaffold:
   - `cmd/` router and CLI entrypoints
   - `internal/` runtime internals
@@ -40,6 +42,7 @@ cd agent-router-implementation
 make test
 make build
 make run
+make bench
 ```
 
 If `go` is already on your `PATH`, the `Makefile` will use it automatically.
@@ -79,7 +82,7 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 
 ## Next implementation focus
 
-1. Add real provider adapters in `pkg/adapters` (OpenAI, Anthropic, Gemini).
-2. Implement enterprise auth/security controls (mTLS, RBAC, audit export).
-3. Add benchmark suite against external frameworks.
-4. Design distributed coordination for multi-instance router deployments.
+1. Implement enterprise auth/security controls (mTLS, RBAC, audit export).
+2. Add benchmark suite against external frameworks.
+3. Design distributed coordination for multi-instance router deployments.
+4. Add multi-tenant namespace isolation and policy enforcement.

@@ -1,2 +1,7 @@
-// Package adapters hosts provider integrations (OpenAI, Anthropic, Gemini).
+// Package adapters provides provider-agnostic LLM adapter interfaces and implementations.
+//
+// Subpackages:
+//   - openai
+//   - anthropic
+//   - gemini
 package adapters
