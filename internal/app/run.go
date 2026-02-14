@@ -40,24 +40,24 @@ func RunManifest(manifestPath string, out io.Writer) error {
 		return err
 	}
 
-	fmt.Fprintf(out, "router executed %d invocation(s) from %s (namespace=%s)\n", len(report.Results), manifestPath, report.Namespace)
+	_, _ = fmt.Fprintf(out, "router executed %d invocation(s) from %s (namespace=%s)\n", len(report.Results), manifestPath, report.Namespace)
 	failed := 0
 	for _, r := range report.Results {
 		if r.Err != nil {
 			failed++
-			fmt.Fprintf(out, "- %s (%s): error=%v\n", r.Invocation.ID, r.Invocation.AgentID, r.Err)
+			_, _ = fmt.Fprintf(out, "- %s (%s): error=%v\n", r.Invocation.ID, r.Invocation.AgentID, r.Err)
 			continue
 		}
-		fmt.Fprintf(out, "- %s (%s): ok duration=%s\n", r.Invocation.ID, r.Invocation.AgentID, r.Output.Duration)
+		_, _ = fmt.Fprintf(out, "- %s (%s): ok duration=%s\n", r.Invocation.ID, r.Invocation.AgentID, r.Output.Duration)
 	}
 	emitStructuredLogs(out, report)
-	fmt.Fprintf(out, "metrics total_invocations=%d errors=%d retries=%d\n",
+	_, _ = fmt.Fprintf(out, "metrics total_invocations=%d errors=%d retries=%d\n",
 		report.Metrics.TotalInvocations,
 		report.Metrics.ErrorInvocations,
 		report.Metrics.RetryAttempts,
 	)
 	if report.Metrics.CircuitOpens > 0 {
-		fmt.Fprintf(out, "metrics circuit_opens=%d\n", report.Metrics.CircuitOpens)
+		_, _ = fmt.Fprintf(out, "metrics circuit_opens=%d\n", report.Metrics.CircuitOpens)
 	}
 	if failed > 0 {
 		return fmt.Errorf("pipeline completed with %d failed invocation(s)", failed)
@@ -222,7 +222,7 @@ func ReplayTrace(tracePath string, out io.Writer) (retErr error) {
 	if err := trace.ReplayAndCompare(context.Background(), tr, 30*time.Second, resolver); err != nil {
 		return fmt.Errorf("replay compare failed: %w", err)
 	}
-	fmt.Fprintf(out, "replay matched recorded outputs for %d step(s)\n", len(tr.Steps))
+	_, _ = fmt.Fprintf(out, "replay matched recorded outputs for %d step(s)\n", len(tr.Steps))
 	return nil
 }
 
@@ -268,6 +268,12 @@ func deterministicAgent(agentID string) agentfunc.AgentFunc {
 			return agentfunc.AgentOutput{}, errors.New("forced failure")
 		case strings.HasPrefix(agentID, "flaky_") && attempt == 1:
 			return agentfunc.AgentOutput{}, errors.New("forced transient failure")
+		case strings.HasPrefix(agentID, "slow_"):
+			select {
+			case <-ctx.Done():
+				return agentfunc.AgentOutput{}, ctx.Err()
+			case <-time.After(200 * time.Millisecond):
+			}
 		}
 
 		payload := []byte(fmt.Sprintf(
@@ -374,7 +380,7 @@ func emitStructuredLogs(out io.Writer, report RunReport) {
 			entry["error"] = errText
 		}
 		if b, err := json.Marshal(entry); err == nil {
-			fmt.Fprintln(out, string(b))
+			_, _ = fmt.Fprintln(out, string(b))
 		}
 	}
 }

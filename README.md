@@ -1,47 +1,26 @@
-# Agent Router Implementation Seed
+# Agent Router Implementation
 
-This directory is a repo-ready implementation seed built from:
+This directory is a repo-ready implementation built from:
 - `../AgentRouter_YC_Report_Full.txt` (end-user/business goals)
-- `../AgentRouter_DevTeam_Report.txt` (engineering contracts and implementation guidance)
+- `../AgentRouter_DevTeam_Report.txt` (engineering architecture and contracts)
 
-It is intentionally scaffold-first: structure, contracts, and development guardrails are in place so implementation can start quickly.
+## Included capabilities
 
-## Why this exists
-
-- Separate working area for implementation before promoting to a standalone repository.
-- Shared source of truth that connects user-facing goals to engineering milestones.
-- Minimal Go project skeleton aligned with the architecture described in the reports.
-
-## What is included
-
-- `docs/end-user-goals.md`: product goals, target users, success criteria.
-- `docs/development-blueprint.md`: architecture contracts, runtime design, coding rules.
-- `docs/goal-to-dev-traceability.md`: mapping from customer outcomes to build tasks.
-- `docs/operations.md`: runtime operations and deployment toggles.
-- `docs/release-checklist.md`: release quality gates.
-- Runtime capabilities:
-  - Dependency-aware DAG execution
-  - Retry + circuit breaker resilience
-  - Deterministic trace recording and replay validation
-  - Structured JSON invocation logs
-  - In-memory metrics + Prometheus endpoint support
-  - OpenTelemetry spans per invocation
-  - Provider adapters for OpenAI, Anthropic, and Gemini
-  - SDK runtime API and provider-to-agent helper
-  - RBAC enforcement and audit logging
-  - Namespace isolation and task coordination leases
-  - Control-plane service for tenant provisioning and usage metering
-- Go project scaffold:
-  - `cmd/` router and CLI entrypoints
-  - `internal/` runtime internals
-  - `pkg/` public API surfaces
-  - `tests/` unit, integration, replay placeholders
-  - `examples/` starter examples
-  - `configs/` manifest template
-  - `.github/workflows/ci.yml` CI pipeline
-  - `.golangci.yml` lint configuration
-  - `deploy/` production container build files
-  - `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`
+- Deterministic DAG execution with dependency ordering
+- Retry engine with linear/exponential/jitter backoff
+- Circuit breaker with failure threshold and reset timeout
+- Deterministic trace recording, replay, and divergence debugging
+- Structured JSON invocation logs and audit log export (JSONL -> CSV)
+- OpenTelemetry tracing (OTLP/gRPC)
+- In-memory and Prometheus metrics
+- RBAC policies for run/validate/replay/admin actions
+- Namespace isolation for tenant-aware execution
+- Task coordination leases (memory, file, Redis)
+- Control-plane service for tenant provisioning, usage metering, rate cards, and invoices
+- Provider adapters: OpenAI, Anthropic, Gemini
+- SDK package and provider-to-agent helper
+- Router HTTP server mode (`serve`) with optional TLS/mTLS
+- CLI commands: `run`, `validate`, `replay`, `audit-export`, `scaffold`, `debug`, `version`
 
 ## Quick start
 
@@ -50,86 +29,102 @@ cd agent-router-implementation
 ~/.local/go1.26.0/bin/go mod tidy
 make test
 make build
-make run
-make bench
+make build-cli
 make build-controlplane
+make run
 ```
 
 If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 
-## Running with a manifest
+## Common commands
 
-- Default: `make run` uses `configs/router.example.yaml`
-- Custom path: `make run MANIFEST_PATH=path/to/manifest.yaml`
-- CLI arg: `go run ./cmd/router path/to/manifest.yaml`
+- `make run MANIFEST_PATH=path/to/manifest.yaml`
+- `make serve` (router API server, default `:8080`)
+- `make validate MANIFEST_PATH=path/to/manifest.yaml`
+- `make replay MANIFEST_PATH=trace.json`
+- `make scaffold TARGET_DIR=./generated PIPELINE_NAME=myflow`
+- `make debug EXPECTED_TRACE=a.json ACTUAL_TRACE=b.json`
+- `make run-controlplane`
+- `make bench`
+- `make lint` (uses local `golangci-lint` or Docker fallback)
+- `make trace-view` / `make trace-down`
 
-## CLI commands
+## Router API (`cmd/router serve`)
 
-- `make cli-run` runs via `cmd/cli run`
-- `make validate` validates manifest structure and DAG dependencies
-- `TRACE_OUTPUT=trace.json make cli-run` records execution trace JSON
-- `make replay MANIFEST_PATH=trace.json` replays and compares outputs from a trace
-- `make audit-export MANIFEST_PATH=/path/to/audit.log` exports audit JSONL to CSV
-- `run` output now includes JSON invocation logs and metrics summary
-- `go run ./cmd/cli run configs/router.example.yaml`
-- `go run ./cmd/cli validate configs/router.example.yaml`
-- `go run ./cmd/cli replay trace.json`
-- `go run ./cmd/cli audit-export /tmp/agent-router.audit.log /tmp/agent-router.audit.csv`
-- `go run ./cmd/cli version`
+- `GET /healthz`
+- `GET /readyz`
+- `POST /run` body: `{"manifest_path":"configs/router.example.yaml"}`
+- `POST /validate` body: `{"manifest_path":"configs/router.example.yaml"}`
+- `POST /replay` body: `{"trace_path":"/path/to/trace.json"}`
 
-## Runtime env vars
+## Control-plane API
 
-- `TRACE_ENABLED=true` enables OpenTelemetry tracing
-- `TRACE_ENDPOINT=host:4317` sends traces via OTLP/gRPC (if unset, stdout exporter is used)
-- `TRACE_OUTPUT=/tmp/run.trace.json` writes deterministic execution trace JSON
-- `METRICS_ENABLED=true` enables Prometheus metrics collection
-- `METRICS_ADDR=127.0.0.1:2112` metrics HTTP bind address (supports `:0`)
-- `METRICS_TLS_ENABLED=true` enables TLS for metrics endpoint
-- `METRICS_TLS_CERT_FILE`, `METRICS_TLS_KEY_FILE`, `METRICS_TLS_CA_FILE`
-- `METRICS_TLS_REQUIRE_CLIENT_CERT=true` enforces mTLS client cert auth
-- `REQUEST_ROLE=viewer|operator|admin` applies RBAC checks for run/validate/replay
-- `AUDIT_LOG_PATH=/tmp/agent-router.audit.log` enables JSONL audit trail
-- `COORDINATION_ENABLED=true` enables task lease locking
-- `COORDINATION_MODE=file|memory|redis`, `COORDINATION_DIR=/tmp/agent-router-coordination`, `COORDINATION_TTL=2m`
-- `COORDINATION_REDIS_URL=redis://localhost:6379/0`, `COORDINATION_REDIS_PREFIX=agent-router`
-- `WORKER_POOL_SIZE`, `CHANNEL_BUFFER`, `DEFAULT_TIMEOUT`
-- `CIRCUIT_FAILURE_THRESHOLD`, `CIRCUIT_RESET_TIMEOUT`
-
-## Example manifests
-
-- `examples/simple-pipeline/manifest.yaml`
-- `examples/parallel-agents/manifest.yaml`
-- `examples/enterprise-workflow/manifest.yaml`
-
-## Next implementation focus
-
-1. Implement enterprise auth/security controls (mTLS, RBAC, audit export).
-2. Add benchmark suite against external frameworks.
-3. Design distributed coordination for multi-instance router deployments.
-4. Add multi-tenant namespace isolation and policy enforcement.
-
-## Control Plane
-
-```bash
-make run-controlplane
-```
-
-Endpoints:
 - `GET /healthz`
 - `GET /readyz`
 - `GET /sla`
-- `POST /tenants` with body `{\"id\":\"tenant-a\"}` and header `X-Role: admin`
+- `POST /tenants` (admin)
 - `GET /tenants`
-- `POST /usage` with body `{\"tenant_id\":\"tenant-a\",\"invocations\":10}` and header `X-Role: admin`
-- `GET /usage?tenant_id=tenant-a`
+- `POST /usage` (admin)
+- `GET /usage?tenant_id=...`
+- `GET /billing/rates`
+- `POST /billing/rates` (admin)
+- `GET /billing/invoice?tenant_id=...`
 
-## Versioned binaries
+## Runtime env vars
 
-- Router: `go run ./cmd/router --version`
-- CLI: `go run ./cmd/cli version`
-- Control-plane: `go run ./cmd/controlplane --version`
+- Tracing:
+  - `TRACE_ENABLED=true`
+  - `TRACE_ENDPOINT=localhost:4317`
+  - `TRACE_OUTPUT=/tmp/run.trace.json`
+- Metrics:
+  - `METRICS_ENABLED=true`
+  - `METRICS_ADDR=127.0.0.1:2112`
+  - `METRICS_TLS_ENABLED=true`
+  - `METRICS_TLS_CERT_FILE`, `METRICS_TLS_KEY_FILE`, `METRICS_TLS_CA_FILE`
+  - `METRICS_TLS_REQUIRE_CLIENT_CERT=true`
+- Security and audit:
+  - `REQUEST_ROLE=viewer|operator|admin`
+  - `AUDIT_LOG_PATH=/tmp/agent-router.audit.log`
+- Coordination:
+  - `COORDINATION_ENABLED=true`
+  - `COORDINATION_MODE=file|memory|redis`
+  - `COORDINATION_DIR=/tmp/agent-router-coordination`
+  - `COORDINATION_TTL=2m`
+  - `COORDINATION_REDIS_URL=redis://localhost:6379/0`
+  - `COORDINATION_REDIS_PREFIX=agent-router`
+- Router server TLS:
+  - `ROUTER_ADDR=:8080`
+  - `ROUTER_TLS_ENABLED=true`
+  - `ROUTER_TLS_CERT_FILE`, `ROUTER_TLS_KEY_FILE`, `ROUTER_TLS_CA_FILE`
+  - `ROUTER_TLS_REQUIRE_CLIENT_CERT=true`
+- Control-plane TLS:
+  - `CONTROLPLANE_ADDR=:8081`
+  - `CONTROLPLANE_TLS_ENABLED=true`
+  - `CONTROLPLANE_TLS_CERT_FILE`, `CONTROLPLANE_TLS_KEY_FILE`, `CONTROLPLANE_TLS_CA_FILE`
+  - `CONTROLPLANE_TLS_REQUIRE_CLIENT_CERT=true`
 
-## Containers
+## Deployment assets
 
-- Router image: `make docker-router`
-- Control-plane image: `make docker-controlplane`
+- Dockerfiles:
+  - `deploy/Dockerfile.router`
+  - `deploy/Dockerfile.controlplane`
+- Observability stack:
+  - `deploy/observability/docker-compose.yml`
+  - Prometheus + Grafana + Jaeger + OTel Collector
+- Kubernetes manifests:
+  - `deploy/k8s/` (`kustomization.yaml` included)
+  - `make k8s-validate` / `make k8s-apply` / `make k8s-delete`
+
+## Version output
+
+- `go run ./cmd/router --version`
+- `go run ./cmd/cli version`
+- `go run ./cmd/controlplane version`
+
+## References
+
+- `docs/end-user-goals.md`
+- `docs/development-blueprint.md`
+- `docs/goal-to-dev-traceability.md`
+- `docs/operations.md`
+- `docs/release-checklist.md`

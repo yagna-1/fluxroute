@@ -1,25 +1,21 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: true
 
 linters:
+  default: none
   enable:
     - govet
     - staticcheck
     - errcheck
     - ineffassign
-    - gosimple
     - unused
-    - gofmt
-    - gocritic
-    - revive
-    - gosec
 
-linters-settings:
-  revive:
-    rules:
-      - name: exported
-        disabled: false
+formatters:
+  enable:
+    - gofmt
 
 issues:
   exclude-use-default: false

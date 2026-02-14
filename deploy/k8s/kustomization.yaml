@@ -1,0 +1,8 @@
+resources:
+  - namespace.yaml
+  - router-configmap.yaml
+  - router-deployment.yaml
+  - router-service.yaml
+  - controlplane-configmap.yaml
+  - controlplane-deployment.yaml
+  - controlplane-service.yaml

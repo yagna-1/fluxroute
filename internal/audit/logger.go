@@ -63,7 +63,7 @@ func (l *Logger) Write(actor, action, resource, status string, err error) error 
 	if openErr != nil {
 		return fmt.Errorf("audit open: %w", openErr)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, wErr := f.Write(append(b, '\n')); wErr != nil {
 		return fmt.Errorf("audit write: %w", wErr)

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-router-config
+  namespace: agent-router
+data:
+  ROUTER_ADDR: ":8080"
+  ROUTER_TLS_ENABLED: "false"
+  METRICS_ENABLED: "true"
+  METRICS_ADDR: ":2112"
+  TRACE_ENABLED: "true"
+  TRACE_ENDPOINT: "otel-collector:4317"

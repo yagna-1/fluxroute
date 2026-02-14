@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/your-org/agent-router/internal/billing"
 	"github.com/your-org/agent-router/internal/security"
 )
 
@@ -19,12 +20,14 @@ type Service struct {
 	mu      sync.Mutex
 	tenants map[string]struct{}
 	usage   map[string]int64
+	rate    billing.RateCard
 	started time.Time
 	reqs    int64
 }
 
 func NewService() *Service {
-	return &Service{tenants: make(map[string]struct{}), usage: make(map[string]int64), started: time.Now()}
+	rate, _ := billing.NewRateCard(1.0)
+	return &Service{tenants: make(map[string]struct{}), usage: make(map[string]int64), rate: rate, started: time.Now()}
 }
 
 func (s *Service) AddTenant(id string) error {
@@ -65,6 +68,23 @@ func (s *Service) Usage(tenantID string) int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.usage[tenantID]
+}
+
+func (s *Service) SetRate(usdPerThousand float64) error {
+	rate, err := billing.NewRateCard(usdPerThousand)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.rate = rate
+	return nil
+}
+
+func (s *Service) Invoice(tenantID string) billing.Invoice {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.rate.Invoice(tenantID, s.usage[tenantID])
 }
 
 func (s *Service) Handler() http.Handler {
@@ -154,6 +174,43 @@ func (s *Service) Handler() http.Handler {
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+	mux.HandleFunc("/billing/rates", func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
+		switch r.Method {
+		case http.MethodGet:
+			s.mu.Lock()
+			rate := s.rate.USDPerThousand
+			s.mu.Unlock()
+			_ = json.NewEncoder(w).Encode(map[string]any{"usd_per_thousand": rate})
+		case http.MethodPost:
+			if !requireAdmin(w, r) {
+				return
+			}
+			var req struct {
+				USDPerThousand float64 `json:"usd_per_thousand"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if err := s.SetRate(req.USDPerThousand); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/billing/invoice", func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		tenantID := r.URL.Query().Get("tenant_id")
+		_ = json.NewEncoder(w).Encode(s.Invoice(tenantID))
 	})
 	return mux
 }

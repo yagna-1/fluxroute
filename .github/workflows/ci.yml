@@ -22,11 +22,19 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Install golangci-lint
+      - name: Lint
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.4
           args: --timeout=5m
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.0
+      - name: Validate observability compose
+        run: docker compose -f deploy/observability/docker-compose.yml config >/dev/null
+      - name: Validate Kubernetes manifests
+        run: make k8s-validate
       - name: Test
         run: make test
       - name: Bench smoke

@@ -14,13 +14,13 @@ func ExportJSONLToCSV(inputPath string, outputPath string) error {
 	if err != nil {
 		return fmt.Errorf("open input audit log: %w", err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(outputPath)
 	if err != nil {
 		return fmt.Errorf("create output csv: %w", err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	w := csv.NewWriter(out)
 	defer w.Flush()

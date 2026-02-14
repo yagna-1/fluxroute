@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-router
+  namespace: agent-router
+spec:
+  selector:
+    app: agent-router
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: metrics
+      port: 2112
+      targetPort: metrics

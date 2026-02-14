@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-router-controlplane
+  namespace: agent-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-router-controlplane
+  template:
+    metadata:
+      labels:
+        app: agent-router-controlplane
+    spec:
+      containers:
+        - name: controlplane
+          image: agent-router-controlplane:dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: agent-router-controlplane-config
+          ports:
+            - containerPort: 8081
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5

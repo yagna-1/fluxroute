@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,7 +14,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
+	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version" || os.Args[1] == "version") {
 		fmt.Println(version.String())
 		return
 	}
@@ -41,7 +43,7 @@ func main() {
 	} else {
 		err = controlplane.StartServer(ctx, addr, svc)
 	}
-	if err != nil && err.Error() != "http: Server closed" {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fmt.Fprintf(os.Stderr, "controlplane failed: %v\n", err)
 		os.Exit(1)
 	}

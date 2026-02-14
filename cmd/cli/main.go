@@ -53,6 +53,25 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("audit export complete: %s -> %s\n", inputPath, outputPath)
+	case "scaffold":
+		targetDir := path
+		pipelineName := "sample"
+		if len(os.Args) > 3 {
+			pipelineName = os.Args[3]
+		}
+		if err := app.ScaffoldProject(targetDir, pipelineName, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "cli scaffold failed: %v\n", err)
+			os.Exit(1)
+		}
+	case "debug":
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "usage: agent-router-cli debug <expected_trace> <actual_trace>")
+			os.Exit(1)
+		}
+		if err := app.DebugTrace(os.Args[2], os.Args[3], os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "cli debug failed: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		usage()
 		os.Exit(1)
@@ -60,5 +79,5 @@ func main() {
 }
 
 func usage() {
-	fmt.Println("usage: agent-router-cli <run|validate|replay|audit-export|version> [path] [output_csv]")
+	fmt.Println("usage: agent-router-cli <run|validate|replay|audit-export|scaffold|debug|version> [path] [extra]")
 }

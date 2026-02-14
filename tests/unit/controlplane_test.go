@@ -42,6 +42,24 @@ func TestControlplaneHandler(t *testing.T) {
 		t.Fatalf("expected usage response to include 5, got %s", w.Body.String())
 	}
 
+	req = httptest.NewRequest(http.MethodPost, "/billing/rates", bytes.NewReader([]byte(`{"usd_per_thousand":2.5}`)))
+	req.Header.Set("X-Role", "admin")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("expected 202 for billing rate update, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/billing/invoice?tenant_id=tenant-a", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for invoice, got %d", w.Code)
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte("amount_usd")) {
+		t.Fatalf("expected invoice payload, got %s", w.Body.String())
+	}
+
 	req = httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, req)
