@@ -32,9 +32,16 @@ cd agent-router-implementation
 ~/.local/go1.26.0/bin/go mod tidy
 make test
 make build
+make run
 ```
 
 If `go` is already on your `PATH`, the `Makefile` will use it automatically.
+
+## Running with a manifest
+
+- Default: `make run` uses `configs/router.example.yaml`
+- Custom path: `make run MANIFEST_PATH=path/to/manifest.yaml`
+- CLI arg: `go run ./cmd/router path/to/manifest.yaml`
 
 ## Next implementation focus
 

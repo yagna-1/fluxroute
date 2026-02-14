@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/your-org/agent-router/pkg/agentfunc"
@@ -9,11 +10,7 @@ import (
 
 // FromEnv loads baseline runtime config from environment with safe defaults.
 func FromEnv() agentfunc.RouterConfig {
-	_ = os.Getenv("WORKER_POOL_SIZE")
-	_ = os.Getenv("CHANNEL_BUFFER")
-	_ = os.Getenv("DEFAULT_TIMEOUT")
-
-	return agentfunc.RouterConfig{
+	cfg := agentfunc.RouterConfig{
 		WorkerPoolSize: 10,
 		ChannelBuffer:  100,
 		DefaultTimeout: 30 * time.Second,
@@ -22,4 +19,22 @@ func FromEnv() agentfunc.RouterConfig {
 			Backoff:     agentfunc.BackoffLinear,
 		},
 	}
+
+	if v := os.Getenv("WORKER_POOL_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.WorkerPoolSize = n
+		}
+	}
+	if v := os.Getenv("CHANNEL_BUFFER"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.ChannelBuffer = n
+		}
+	}
+	if v := os.Getenv("DEFAULT_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			cfg.DefaultTimeout = d
+		}
+	}
+
+	return cfg
 }

@@ -1,5 +1,6 @@
 BINARY := bin/agent-router
 GO ?= $(shell command -v go 2>/dev/null || echo $(HOME)/.local/go1.26.0/bin/go)
+MANIFEST_PATH ?=
 
 .PHONY: build test test-unit test-integ test-replay lint run clean
 
@@ -21,7 +22,7 @@ lint:
 	$(GO) test ./...
 
 run:
-	$(GO) run ./cmd/router
+	$(GO) run ./cmd/router $(MANIFEST_PATH)
 
 clean:
 	rm -rf bin
