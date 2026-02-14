@@ -17,6 +17,8 @@ It is intentionally scaffold-first: structure, contracts, and development guardr
 - `docs/end-user-goals.md`: product goals, target users, success criteria.
 - `docs/development-blueprint.md`: architecture contracts, runtime design, coding rules.
 - `docs/goal-to-dev-traceability.md`: mapping from customer outcomes to build tasks.
+- `docs/operations.md`: runtime operations and deployment toggles.
+- `docs/release-checklist.md`: release quality gates.
 - Runtime capabilities:
   - Dependency-aware DAG execution
   - Retry + circuit breaker resilience
@@ -36,6 +38,10 @@ It is intentionally scaffold-first: structure, contracts, and development guardr
   - `tests/` unit, integration, replay placeholders
   - `examples/` starter examples
   - `configs/` manifest template
+  - `.github/workflows/ci.yml` CI pipeline
+  - `.golangci.yml` lint configuration
+  - `deploy/` production container build files
+  - `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`
 
 ## Quick start
 
@@ -46,6 +52,7 @@ make test
 make build
 make run
 make bench
+make build-controlplane
 ```
 
 If `go` is already on your `PATH`, the `Makefile` will use it automatically.
@@ -68,6 +75,7 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `go run ./cmd/cli validate configs/router.example.yaml`
 - `go run ./cmd/cli replay trace.json`
 - `go run ./cmd/cli audit-export /tmp/agent-router.audit.log /tmp/agent-router.audit.csv`
+- `go run ./cmd/cli version`
 
 ## Runtime env vars
 
@@ -114,3 +122,14 @@ Endpoints:
 - `GET /tenants`
 - `POST /usage` with body `{\"tenant_id\":\"tenant-a\",\"invocations\":10}` and header `X-Role: admin`
 - `GET /usage?tenant_id=tenant-a`
+
+## Versioned binaries
+
+- Router: `go run ./cmd/router --version`
+- CLI: `go run ./cmd/cli version`
+- Control-plane: `go run ./cmd/controlplane --version`
+
+## Containers
+
+- Router image: `make docker-router`
+- Control-plane image: `make docker-controlplane`

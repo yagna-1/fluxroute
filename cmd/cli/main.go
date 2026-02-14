@@ -6,6 +6,7 @@ import (
 
 	"github.com/your-org/agent-router/internal/app"
 	"github.com/your-org/agent-router/internal/audit"
+	"github.com/your-org/agent-router/internal/version"
 )
 
 func main() {
@@ -15,6 +16,10 @@ func main() {
 	}
 
 	command := os.Args[1]
+	if command == "-v" || command == "--version" || command == "version" {
+		fmt.Println(version.String())
+		return
+	}
 	path := "configs/router.example.yaml"
 	if len(os.Args) > 2 {
 		path = os.Args[2]
@@ -55,5 +60,5 @@ func main() {
 }
 
 func usage() {
-	fmt.Println("usage: agent-router-cli <run|validate|replay|audit-export> [path] [output_csv]")
+	fmt.Println("usage: agent-router-cli <run|validate|replay|audit-export|version> [path] [output_csv]")
 }
