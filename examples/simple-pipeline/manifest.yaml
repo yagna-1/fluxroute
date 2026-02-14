@@ -1,0 +1,19 @@
+router:
+  worker_pool_size: 4
+  channel_buffer: 16
+  default_timeout: 10s
+
+agents:
+  - id: summarize_agent
+    retry:
+      max_attempts: 1
+      backoff: linear
+  - id: classify_agent
+    retry:
+      max_attempts: 1
+      backoff: linear
+
+pipeline:
+  - step: summarize_agent
+  - step: classify_agent
+    depends_on: summarize_agent

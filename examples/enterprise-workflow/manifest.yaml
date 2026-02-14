@@ -1,0 +1,31 @@
+router:
+  worker_pool_size: 12
+  channel_buffer: 64
+  default_timeout: 15s
+
+agents:
+  - id: flaky_ingest
+    retry:
+      max_attempts: 2
+      backoff: exponential_jitter
+  - id: validate_agent
+    retry:
+      max_attempts: 1
+      backoff: linear
+  - id: classify_agent
+    retry:
+      max_attempts: 2
+      backoff: exponential
+  - id: audit_agent
+    retry:
+      max_attempts: 1
+      backoff: linear
+
+pipeline:
+  - step: flaky_ingest
+  - step: validate_agent
+    depends_on: flaky_ingest
+  - step: classify_agent
+    depends_on: validate_agent
+  - step: audit_agent
+    depends_on: classify_agent

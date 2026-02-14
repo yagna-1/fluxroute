@@ -54,6 +54,12 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `go run ./cmd/cli validate configs/router.example.yaml`
 - `go run ./cmd/cli replay trace.json`
 
+## Example manifests
+
+- `examples/simple-pipeline/manifest.yaml`
+- `examples/parallel-agents/manifest.yaml`
+- `examples/enterprise-workflow/manifest.yaml`
+
 ## Next implementation focus
 
 1. Fill `pkg/agentfunc` and `internal/agent` contracts fully.
