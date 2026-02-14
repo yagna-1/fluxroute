@@ -20,7 +20,22 @@ func main() {
 	defer cancel()
 
 	svc := controlplane.NewService()
-	if err := controlplane.StartServer(ctx, addr, svc); err != nil && err.Error() != "http: Server closed" {
+	tlsEnabled := os.Getenv("CONTROLPLANE_TLS_ENABLED") == "true"
+	var err error
+	if tlsEnabled {
+		err = controlplane.StartServerTLS(
+			ctx,
+			addr,
+			svc,
+			os.Getenv("CONTROLPLANE_TLS_CERT_FILE"),
+			os.Getenv("CONTROLPLANE_TLS_KEY_FILE"),
+			os.Getenv("CONTROLPLANE_TLS_CA_FILE"),
+			os.Getenv("CONTROLPLANE_TLS_REQUIRE_CLIENT_CERT") == "true",
+		)
+	} else {
+		err = controlplane.StartServer(ctx, addr, svc)
+	}
+	if err != nil && err.Error() != "http: Server closed" {
 		fmt.Fprintf(os.Stderr, "controlplane failed: %v\n", err)
 		os.Exit(1)
 	}

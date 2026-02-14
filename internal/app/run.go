@@ -406,6 +406,14 @@ func acquireLeaseIfEnabled(ctx context.Context, namespace string, taskID string)
 	switch mode {
 	case "memory":
 		coord = coordinator.NewMemoryCoordinator()
+	case "redis":
+		redisURL := strings.TrimSpace(os.Getenv("COORDINATION_REDIS_URL"))
+		redisPrefix := strings.TrimSpace(os.Getenv("COORDINATION_REDIS_PREFIX"))
+		redisCoord, err := coordinator.NewRedisCoordinator(redisURL, redisPrefix)
+		if err != nil {
+			return nil, err
+		}
+		coord = redisCoord
 	default:
 		coord = coordinator.NewFileCoordinator(os.Getenv("COORDINATION_DIR"))
 	}

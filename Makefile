@@ -4,7 +4,7 @@ CONTROLPLANE_BINARY := bin/agent-router-controlplane
 GO ?= $(shell command -v go 2>/dev/null || echo $(HOME)/.local/go1.26.0/bin/go)
 MANIFEST_PATH ?=
 
-.PHONY: build build-cli build-controlplane test test-unit test-integ test-replay lint run cli-run validate replay bench run-controlplane clean
+.PHONY: build build-cli build-controlplane test test-unit test-integ test-replay lint run cli-run validate replay audit-export bench run-controlplane clean
 
 build:
 	CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o $(BINARY) ./cmd/router
@@ -40,6 +40,9 @@ validate:
 
 replay:
 	$(GO) run ./cmd/cli replay $(MANIFEST_PATH)
+
+audit-export:
+	$(GO) run ./cmd/cli audit-export $(MANIFEST_PATH)
 
 bench:
 	$(GO) test ./tests/bench/... -bench . -benchmem

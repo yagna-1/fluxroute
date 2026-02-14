@@ -41,6 +41,23 @@ func TestControlplaneHandler(t *testing.T) {
 	if !bytes.Contains(w.Body.Bytes(), []byte("5")) {
 		t.Fatalf("expected usage response to include 5, got %s", w.Body.String())
 	}
+
+	req = httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for healthz, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/sla", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for sla, got %d", w.Code)
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte("slo_target")) {
+		t.Fatalf("expected sla payload, got %s", w.Body.String())
+	}
 }
 
 func TestControlplaneRBACDenied(t *testing.T) {

@@ -62,10 +62,12 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `make validate` validates manifest structure and DAG dependencies
 - `TRACE_OUTPUT=trace.json make cli-run` records execution trace JSON
 - `make replay MANIFEST_PATH=trace.json` replays and compares outputs from a trace
+- `make audit-export MANIFEST_PATH=/path/to/audit.log` exports audit JSONL to CSV
 - `run` output now includes JSON invocation logs and metrics summary
 - `go run ./cmd/cli run configs/router.example.yaml`
 - `go run ./cmd/cli validate configs/router.example.yaml`
 - `go run ./cmd/cli replay trace.json`
+- `go run ./cmd/cli audit-export /tmp/agent-router.audit.log /tmp/agent-router.audit.csv`
 
 ## Runtime env vars
 
@@ -80,7 +82,8 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `REQUEST_ROLE=viewer|operator|admin` applies RBAC checks for run/validate/replay
 - `AUDIT_LOG_PATH=/tmp/agent-router.audit.log` enables JSONL audit trail
 - `COORDINATION_ENABLED=true` enables task lease locking
-- `COORDINATION_MODE=file|memory`, `COORDINATION_DIR=/tmp/agent-router-coordination`, `COORDINATION_TTL=2m`
+- `COORDINATION_MODE=file|memory|redis`, `COORDINATION_DIR=/tmp/agent-router-coordination`, `COORDINATION_TTL=2m`
+- `COORDINATION_REDIS_URL=redis://localhost:6379/0`, `COORDINATION_REDIS_PREFIX=agent-router`
 - `WORKER_POOL_SIZE`, `CHANNEL_BUFFER`, `DEFAULT_TIMEOUT`
 - `CIRCUIT_FAILURE_THRESHOLD`, `CIRCUIT_RESET_TIMEOUT`
 
@@ -104,6 +107,9 @@ make run-controlplane
 ```
 
 Endpoints:
+- `GET /healthz`
+- `GET /readyz`
+- `GET /sla`
 - `POST /tenants` with body `{\"id\":\"tenant-a\"}` and header `X-Role: admin`
 - `GET /tenants`
 - `POST /usage` with body `{\"tenant_id\":\"tenant-a\",\"invocations\":10}` and header `X-Role: admin`

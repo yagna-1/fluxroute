@@ -2,11 +2,15 @@ package controlplane
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"sort"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/your-org/agent-router/internal/security"
 )
@@ -15,10 +19,12 @@ type Service struct {
 	mu      sync.Mutex
 	tenants map[string]struct{}
 	usage   map[string]int64
+	started time.Time
+	reqs    int64
 }
 
 func NewService() *Service {
-	return &Service{tenants: make(map[string]struct{}), usage: make(map[string]int64)}
+	return &Service{tenants: make(map[string]struct{}), usage: make(map[string]int64), started: time.Now()}
 }
 
 func (s *Service) AddTenant(id string) error {
@@ -77,7 +83,27 @@ func (s *Service) Handler() http.Handler {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ready"))
+	})
+	mux.HandleFunc("/sla", func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
+		uptime := int64(time.Since(s.started).Seconds())
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"uptime_seconds": uptime,
+			"total_requests": atomic.LoadInt64(&s.reqs),
+			"slo_target":     "99.9%",
+		})
+	})
 	mux.HandleFunc("/tenants", func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
 		switch r.Method {
 		case http.MethodGet:
 			_ = json.NewEncoder(w).Encode(map[string]any{"tenants": s.ListTenants()})
@@ -103,6 +129,7 @@ func (s *Service) Handler() http.Handler {
 	})
 
 	mux.HandleFunc("/usage", func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&s.reqs, 1)
 		switch r.Method {
 		case http.MethodGet:
 			tenantID := r.URL.Query().Get("tenant_id")
@@ -141,4 +168,26 @@ func StartServer(ctx context.Context, addr string, svc *Service) error {
 		_ = s.Shutdown(context.Background())
 	}()
 	return s.ListenAndServe()
+}
+
+func StartServerTLS(ctx context.Context, addr string, svc *Service, certFile string, keyFile string, caFile string, requireClientCert bool) error {
+	if addr == "" {
+		addr = ":8081"
+	}
+	tlsCfg, err := security.BuildServerTLSConfig(certFile, keyFile, caFile, requireClientCert)
+	if err != nil {
+		return err
+	}
+
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("listen controlplane: %w", err)
+	}
+	tlsListener := tls.NewListener(ln, tlsCfg)
+	s := &http.Server{Addr: ln.Addr().String(), Handler: svc.Handler()}
+	go func() {
+		<-ctx.Done()
+		_ = s.Shutdown(context.Background())
+	}()
+	return s.Serve(tlsListener)
 }
