@@ -1,26 +1,102 @@
-# FluxRoute Implementation
+<div align="center">
+  <img src="docs/assets/fluxroute-logo.svg" alt="FluxRoute logo" width="900" />
 
-This directory is a repo-ready implementation built from:
-- `../AgentRouter_YC_Report_Full.txt` (end-user/business goals)
-- `../AgentRouter_DevTeam_Report.txt` (engineering architecture and contracts)
+  <p>
+    <a href="https://github.com/yagna-1/fluxroute/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/yagna-1/fluxroute/actions/workflows/ci.yml/badge.svg" /></a>
+    <img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white" />
+    <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-2ea44f" />
+    <img alt="Runtime" src="https://img.shields.io/badge/Runtime-Deterministic-0ea5e9" />
+    <img alt="Observability" src="https://img.shields.io/badge/Observability-OTel%20%7C%20Prometheus%20%7C%20Jaeger-f59e0b" />
+  </p>
 
-## Included capabilities
+  <p><strong>FluxRoute</strong> is a deterministic, channel-based AI orchestration runtime in Go.</p>
+</div>
 
-- Deterministic DAG execution with dependency ordering
-- Retry engine with linear/exponential/jitter backoff
-- Circuit breaker with failure threshold and reset timeout
-- Deterministic trace recording, replay, and divergence debugging
-- Structured JSON invocation logs and audit log export (JSONL -> CSV)
-- OpenTelemetry tracing (OTLP/gRPC)
-- In-memory and Prometheus metrics
-- RBAC policies for run/validate/replay/admin actions
-- Namespace isolation for tenant-aware execution
-- Task coordination leases (memory, file, Redis)
-- Control-plane service for tenant provisioning, usage metering, rate cards, and invoices
-- Provider adapters: OpenAI, Anthropic, Gemini
-- SDK package and provider-to-agent helper
-- Router HTTP server mode (`serve`) with optional TLS/mTLS
-- CLI commands: `run`, `validate`, `replay`, `audit-export`, `scaffold`, `debug`, `version`
+## Why FluxRoute
+
+- Deterministic DAG execution with replay validation.
+- Explicit state, strict manifest validation, and no hidden framework magic.
+- Built-in resilience: retry + circuit breaker + panic containment.
+- Production-friendly observability: JSON logs, OpenTelemetry, Prometheus, audit export.
+- Enterprise primitives: RBAC, namespace isolation, coordination leases, control-plane APIs.
+
+## Animated identity
+
+<div align="center">
+  <img src="docs/assets/fluxroute-logo-animated.svg" alt="FluxRoute animated logo" width="900" />
+</div>
+
+## Architecture
+
+```mermaid
+flowchart LR
+    C[Client / SDK / CLI] --> API[Router API\n/run /validate /replay]
+    API --> CFG[Manifest + RBAC + Namespace]
+    CFG --> ENG[Router Engine\nDispatcher / Executor / Aggregator]
+
+    ENG --> REG[Agent Registry]
+    ENG --> RES[Retry + Circuit Breaker]
+    ENG --> TRC[Trace Recorder]
+    ENG --> MET[Metrics Recorder]
+
+    TRC --> FILE[Trace JSON]
+    TRC --> OTL[OpenTelemetry Export]
+    OTL --> JAE[Jaeger via OTel Collector]
+
+    MET --> PROM[Prometheus]
+    PROM --> GRAF[Grafana Dashboard]
+
+    CP[Control Plane API] --> TEN[Tenant Provisioning]
+    CP --> USE[Usage Metering]
+    CP --> BILL[Rate Card + Invoice]
+
+    classDef ingress fill:#14324b,color:#e8f6ff,stroke:#3a6d96,stroke-width:1.5px;
+    classDef core fill:#173f2a,color:#e9fff3,stroke:#36b37e,stroke-width:1.5px;
+    classDef obs fill:#4a2f10,color:#fff3df,stroke:#ffb454,stroke-width:1.5px;
+    classDef ent fill:#3d1634,color:#ffecfb,stroke:#e879f9,stroke-width:1.5px;
+
+    class C,API ingress;
+    class CFG,ENG,REG,RES core;
+    class TRC,MET,FILE,OTL,JAE,PROM,GRAF obs;
+    class CP,TEN,USE,BILL ent;
+```
+
+## Execution flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User/Caller
+    participant R as Router
+    participant M as Manifest Validator
+    participant E as Engine
+    participant A as Agent(s)
+    participant T as Trace
+    participant X as Metrics
+
+    U->>R: POST /run {manifest_path}
+    R->>M: Load + validate manifest (DAG/RBAC/namespace)
+    M-->>R: Validated config
+    R->>E: Build execution plan
+    E->>A: Dispatch invocations (goroutines + channels)
+    A-->>E: AgentOutput / error
+    E->>T: Record deterministic steps
+    E->>X: Observe invocations/retries/circuit state
+    E-->>R: Ordered aggregated result
+    R-->>U: Accepted/Result summary
+```
+
+## Resilience model
+
+```mermaid
+stateDiagram-v2
+    [*] --> Closed
+    Closed --> Closed: success
+    Closed --> Open: failures >= threshold
+    Open --> HalfOpen: reset timeout elapsed
+    HalfOpen --> Closed: probe success
+    HalfOpen --> Open: probe failure
+```
 
 ## Quick start
 
@@ -28,103 +104,102 @@ This directory is a repo-ready implementation built from:
 cd <repo-root>
 ~/.local/go1.26.0/bin/go mod tidy
 make test
+make lint
 make build
 make build-cli
 make build-controlplane
 make run
 ```
 
-If `go` is already on your `PATH`, the `Makefile` will use it automatically.
+## Core commands
 
-## Common commands
+| Goal | Command |
+|---|---|
+| Run default manifest | `make run` |
+| Run custom manifest | `make run MANIFEST_PATH=path/to/manifest.yaml` |
+| Start Router API server | `make serve` |
+| Validate manifest | `make validate MANIFEST_PATH=path/to/manifest.yaml` |
+| Replay deterministic trace | `make replay MANIFEST_PATH=trace.json` |
+| Scaffold starter pipeline | `make scaffold TARGET_DIR=./generated PIPELINE_NAME=myflow` |
+| Compare expected vs actual traces | `make debug EXPECTED_TRACE=a.json ACTUAL_TRACE=b.json` |
+| Start control plane | `make run-controlplane` |
+| Benchmark router paths | `make bench` |
+| Observability stack up/down | `make trace-view` / `make trace-down` |
+| Validate/apply k8s manifests | `make k8s-validate` / `make k8s-apply` |
 
-- `make run MANIFEST_PATH=path/to/manifest.yaml`
-- `make serve` (router API server, default `:8080`)
-- `make validate MANIFEST_PATH=path/to/manifest.yaml`
-- `make replay MANIFEST_PATH=trace.json`
-- `make scaffold TARGET_DIR=./generated PIPELINE_NAME=myflow`
-- `make debug EXPECTED_TRACE=a.json ACTUAL_TRACE=b.json`
-- `make run-controlplane`
-- `make bench`
-- `make lint` (uses local `golangci-lint` or Docker fallback)
-- `make trace-view` / `make trace-down`
+## API surface
 
-## Router API (`cmd/router serve`)
+### Router (`cmd/router serve`)
 
-- `GET /healthz`
-- `GET /readyz`
-- `POST /run` body: `{"manifest_path":"configs/router.example.yaml"}`
-- `POST /validate` body: `{"manifest_path":"configs/router.example.yaml"}`
-- `POST /replay` body: `{"trace_path":"/path/to/trace.json"}`
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/healthz` | Liveness |
+| `GET` | `/readyz` | Readiness |
+| `POST` | `/run` | Run manifest (`{"manifest_path":"..."}`) |
+| `POST` | `/validate` | Validate manifest (`{"manifest_path":"..."}`) |
+| `POST` | `/replay` | Replay trace (`{"trace_path":"..."}`) |
 
-## Control-plane API
+### Control plane (`cmd/controlplane`)
 
-- `GET /healthz`
-- `GET /readyz`
-- `GET /sla`
-- `POST /tenants` (admin)
-- `GET /tenants`
-- `POST /usage` (admin)
-- `GET /usage?tenant_id=...`
-- `GET /billing/rates`
-- `POST /billing/rates` (admin)
-- `GET /billing/invoice?tenant_id=...`
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/healthz` | Liveness |
+| `GET` | `/readyz` | Readiness |
+| `GET` | `/sla` | SLA telemetry snapshot |
+| `POST` | `/tenants` | Create tenant (admin) |
+| `GET` | `/tenants` | List tenants |
+| `POST` | `/usage` | Add usage (admin) |
+| `GET` | `/usage?tenant_id=...` | Read tenant usage |
+| `GET` | `/billing/rates` | Get pricing |
+| `POST` | `/billing/rates` | Update pricing (admin) |
+| `GET` | `/billing/invoice?tenant_id=...` | Generate invoice view |
 
-## Runtime env vars
+## Observability stack
 
-- Tracing:
-  - `TRACE_ENABLED=true`
-  - `TRACE_ENDPOINT=localhost:4317`
-  - `TRACE_OUTPUT=/tmp/run.trace.json`
-- Metrics:
-  - `METRICS_ENABLED=true`
-  - `METRICS_ADDR=127.0.0.1:2112`
-  - `METRICS_TLS_ENABLED=true`
-  - `METRICS_TLS_CERT_FILE`, `METRICS_TLS_KEY_FILE`, `METRICS_TLS_CA_FILE`
-  - `METRICS_TLS_REQUIRE_CLIENT_CERT=true`
-- Security and audit:
-  - `REQUEST_ROLE=viewer|operator|admin`
-  - `AUDIT_LOG_PATH=/tmp/fluxroute.audit.log`
-- Coordination:
-  - `COORDINATION_ENABLED=true`
-  - `COORDINATION_MODE=file|memory|redis`
-  - `COORDINATION_DIR=/tmp/fluxroute-coordination`
-  - `COORDINATION_TTL=2m`
-  - `COORDINATION_REDIS_URL=redis://localhost:6379/0`
-  - `COORDINATION_REDIS_PREFIX=fluxroute`
-- Router server TLS:
-  - `ROUTER_ADDR=:8080`
-  - `ROUTER_TLS_ENABLED=true`
-  - `ROUTER_TLS_CERT_FILE`, `ROUTER_TLS_KEY_FILE`, `ROUTER_TLS_CA_FILE`
-  - `ROUTER_TLS_REQUIRE_CLIENT_CERT=true`
-- Control-plane TLS:
-  - `CONTROLPLANE_ADDR=:8081`
-  - `CONTROLPLANE_TLS_ENABLED=true`
-  - `CONTROLPLANE_TLS_CERT_FILE`, `CONTROLPLANE_TLS_KEY_FILE`, `CONTROLPLANE_TLS_CA_FILE`
-  - `CONTROLPLANE_TLS_REQUIRE_CLIENT_CERT=true`
+```mermaid
+flowchart TB
+    R[FluxRoute Runtime] -->|OTLP gRPC| O[OTel Collector]
+    O --> J[Jaeger]
+    R -->|/metrics| P[Prometheus]
+    P --> G[Grafana]
+
+    classDef a fill:#173f2a,color:#e9fff3,stroke:#36b37e,stroke-width:1.5px;
+    classDef b fill:#4a2f10,color:#fff3df,stroke:#ffb454,stroke-width:1.5px;
+    class R a;
+    class O,J,P,G b;
+```
+
+- Local stack definition: `deploy/observability/docker-compose.yml`
+- Dashboard JSON: `deploy/observability/grafana/dashboards/fluxroute-overview.json`
+
+## Configuration highlights
+
+- Tracing: `TRACE_ENABLED`, `TRACE_ENDPOINT`, `TRACE_OUTPUT`
+- Metrics: `METRICS_ENABLED`, `METRICS_ADDR`, `METRICS_TLS_*`
+- Security: `REQUEST_ROLE`, `AUDIT_LOG_PATH`
+- Coordination: `COORDINATION_ENABLED`, `COORDINATION_MODE`, `COORDINATION_REDIS_URL`
+- Router TLS: `ROUTER_TLS_ENABLED`, `ROUTER_TLS_*`
+- Control-plane TLS: `CONTROLPLANE_TLS_ENABLED`, `CONTROLPLANE_TLS_*`
 
 ## Deployment assets
 
-- Dockerfiles:
-  - `deploy/Dockerfile.router`
-  - `deploy/Dockerfile.controlplane`
-- Observability stack:
-  - `deploy/observability/docker-compose.yml`
-  - Prometheus + Grafana + Jaeger + OTel Collector
-- Kubernetes manifests:
-  - `deploy/k8s/` (`kustomization.yaml` included)
-  - `make k8s-validate` / `make k8s-apply` / `make k8s-delete`
+- Docker: `deploy/Dockerfile.router`, `deploy/Dockerfile.controlplane`
+- Kubernetes: `deploy/k8s/kustomization.yaml`
+- CI workflow: `.github/workflows/ci.yml`
 
-## Version output
+## Version commands
 
-- `go run ./cmd/router --version`
-- `go run ./cmd/cli version`
-- `go run ./cmd/controlplane version`
+```bash
+go run ./cmd/router --version
+go run ./cmd/cli version
+go run ./cmd/controlplane version
+```
 
-## References
+## Documentation map
 
 - `docs/end-user-goals.md`
 - `docs/development-blueprint.md`
 - `docs/goal-to-dev-traceability.md`
 - `docs/operations.md`
 - `docs/release-checklist.md`
+- `docs/requirement-verification-2026-02-14.md`

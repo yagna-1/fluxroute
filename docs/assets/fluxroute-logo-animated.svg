@@ -1,0 +1,59 @@
+<svg width="1200" height="420" viewBox="0 0 1200 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FluxRoute animated logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#02101d"/>
+      <stop offset="100%" stop-color="#0b2f4a"/>
+    </linearGradient>
+    <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="50%" stop-color="#3ee07a"/>
+      <stop offset="100%" stop-color="#ffbe3b"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="420" rx="28" fill="url(#bg)"/>
+
+  <g transform="translate(82,88)">
+    <rect x="0" y="0" width="244" height="244" rx="24" fill="#06223a" stroke="#1f547d" stroke-width="3"/>
+
+    <circle cx="60" cy="60" r="15" fill="#00d4ff"/>
+    <circle cx="184" cy="60" r="15" fill="#3ee07a"/>
+    <circle cx="184" cy="184" r="15" fill="#ffbe3b"/>
+    <circle cx="60" cy="184" r="15" fill="#ff6d7a"/>
+
+    <path d="M60 60 L184 60 L184 184 L60 184 Z" fill="none" stroke="url(#pulse)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+      <animate attributeName="stroke-dasharray" values="0,560;560,0;0,560" dur="3.6s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="0;-280;-560" dur="3.6s" repeatCount="indefinite"/>
+    </path>
+
+    <circle cx="60" cy="60" r="7" fill="#ffffff">
+      <animate attributeName="opacity" values="1;0.2;1" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="184" cy="60" r="7" fill="#ffffff">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="184" cy="184" r="7" fill="#ffffff">
+      <animate attributeName="opacity" values="1;0.2;1" dur="1.5s" begin="0.75s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="60" cy="184" r="7" fill="#ffffff">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" begin="0.75s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <g transform="translate(375,120)">
+    <text x="0" y="85" fill="#ecf9ff" font-size="90" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="700" letter-spacing="1.5">FluxRoute</text>
+    <text x="0" y="136" fill="#9dcbe6" font-size="31" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">Deterministic. Observable. Concurrent.</text>
+
+    <rect x="0" y="170" width="730" height="5" rx="2.5" fill="#1b496e"/>
+    <rect x="0" y="170" width="180" height="5" rx="2.5" fill="url(#pulse)">
+      <animate attributeName="x" values="0;550;0" dur="2.8s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+</svg>
