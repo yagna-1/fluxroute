@@ -3,7 +3,7 @@ CLI_BINARY := bin/agent-router-cli
 GO ?= $(shell command -v go 2>/dev/null || echo $(HOME)/.local/go1.26.0/bin/go)
 MANIFEST_PATH ?=
 
-.PHONY: build build-cli test test-unit test-integ test-replay lint run cli-run validate clean
+.PHONY: build build-cli test test-unit test-integ test-replay lint run cli-run validate replay clean
 
 build:
 	CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o $(BINARY) ./cmd/router
@@ -33,6 +33,9 @@ cli-run:
 
 validate:
 	$(GO) run ./cmd/cli validate $(MANIFEST_PATH)
+
+replay:
+	$(GO) run ./cmd/cli replay $(MANIFEST_PATH)
 
 clean:
 	rm -rf bin

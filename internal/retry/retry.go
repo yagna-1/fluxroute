@@ -2,7 +2,6 @@ package retry
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	"github.com/your-org/agent-router/pkg/agentfunc"
@@ -25,7 +24,7 @@ func Execute(ctx context.Context, policy agentfunc.RetryPolicy, fn func(context.
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(backoffFor(policy.Backoff, i)):
+			case <-time.After(BackoffDuration(policy.Backoff, i)):
 			}
 			continue
 		}
@@ -34,14 +33,16 @@ func Execute(ctx context.Context, policy agentfunc.RetryPolicy, fn func(context.
 	return lastErr
 }
 
-func backoffFor(strategy agentfunc.BackoffStrategy, attempt int) time.Duration {
+// BackoffDuration returns the sleep interval for a given retry attempt.
+func BackoffDuration(strategy agentfunc.BackoffStrategy, attempt int) time.Duration {
 	base := 100 * time.Millisecond
 	switch strategy {
 	case agentfunc.BackoffExponential:
 		return base * time.Duration(1<<uint(attempt-1))
 	case agentfunc.BackoffExponentialJitter:
 		exp := base * time.Duration(1<<uint(attempt-1))
-		jitter := time.Duration(rand.Int63n(int64(base)))
+		// Deterministic jitter keeps replay behavior stable while spreading retries.
+		jitter := time.Duration((attempt*37)%100) * time.Millisecond
 		return exp + jitter
 	default:
 		return base * time.Duration(attempt)

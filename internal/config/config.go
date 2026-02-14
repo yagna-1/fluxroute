@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -37,4 +38,46 @@ func FromEnv() agentfunc.RouterConfig {
 	}
 
 	return cfg
+}
+
+// RouterConfigFromManifest merges manifest router settings on top of a base config.
+func RouterConfigFromManifest(m Manifest, base agentfunc.RouterConfig) (agentfunc.RouterConfig, error) {
+	cfg := base
+	if m.Router.WorkerPoolSize > 0 {
+		cfg.WorkerPoolSize = m.Router.WorkerPoolSize
+	}
+	if m.Router.ChannelBuffer > 0 {
+		cfg.ChannelBuffer = m.Router.ChannelBuffer
+	}
+	if m.Router.DefaultTimeout != "" {
+		d, err := time.ParseDuration(m.Router.DefaultTimeout)
+		if err != nil {
+			return agentfunc.RouterConfig{}, fmt.Errorf("manifest: invalid router.default_timeout: %w", err)
+		}
+		cfg.DefaultTimeout = d
+	}
+	return cfg, nil
+}
+
+// RetryPolicyFromConfig converts manifest retry settings into runtime policy.
+func RetryPolicyFromConfig(rc RetryConfig) agentfunc.RetryPolicy {
+	p := agentfunc.RetryPolicy{
+		MaxAttempts: rc.MaxAttempts,
+		Backoff:     parseBackoff(rc.Backoff),
+	}
+	if p.MaxAttempts <= 0 {
+		p.MaxAttempts = 1
+	}
+	return p
+}
+
+func parseBackoff(v string) agentfunc.BackoffStrategy {
+	switch v {
+	case string(agentfunc.BackoffExponential):
+		return agentfunc.BackoffExponential
+	case string(agentfunc.BackoffExponentialJitter):
+		return agentfunc.BackoffExponentialJitter
+	default:
+		return agentfunc.BackoffLinear
+	}
 }
