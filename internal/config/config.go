@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/your-org/agent-router/internal/security"
+	"github.com/your-org/agent-router/internal/tenant"
 	"github.com/your-org/agent-router/pkg/agentfunc"
 )
 
@@ -116,4 +118,47 @@ func parseBackoff(v string) agentfunc.BackoffStrategy {
 	default:
 		return agentfunc.BackoffLinear
 	}
+}
+
+// NamespaceFromManifest returns a validated normalized namespace.
+func NamespaceFromManifest(m Manifest) (string, error) {
+	ns := tenant.Normalize(m.Router.Namespace)
+	if err := tenant.Validate(ns); err != nil {
+		return "", err
+	}
+	return ns, nil
+}
+
+// RBACPolicyFromManifest converts manifest RBAC config to runtime policy.
+func RBACPolicyFromManifest(m Manifest) (security.Policy, error) {
+	parseOrDefault := func(values []string, fallback []security.Role) ([]security.Role, error) {
+		if len(values) == 0 {
+			return fallback, nil
+		}
+		return security.ParseRoles(values)
+	}
+
+	runRoles, err := parseOrDefault(m.Router.RBAC.RunRoles, []security.Role{security.RoleOperator, security.RoleAdmin})
+	if err != nil {
+		return security.Policy{}, err
+	}
+	validateRoles, err := parseOrDefault(m.Router.RBAC.ValidateRoles, []security.Role{security.RoleViewer, security.RoleOperator, security.RoleAdmin})
+	if err != nil {
+		return security.Policy{}, err
+	}
+	replayRoles, err := parseOrDefault(m.Router.RBAC.ReplayRoles, []security.Role{security.RoleOperator, security.RoleAdmin})
+	if err != nil {
+		return security.Policy{}, err
+	}
+	adminRoles, err := parseOrDefault(m.Router.RBAC.AdminRoles, []security.Role{security.RoleAdmin})
+	if err != nil {
+		return security.Policy{}, err
+	}
+
+	return security.NewPolicy(map[security.Action][]security.Role{
+		security.ActionRun:      runRoles,
+		security.ActionValidate: validateRoles,
+		security.ActionReplay:   replayRoles,
+		security.ActionAdmin:    adminRoles,
+	}), nil
 }

@@ -2,6 +2,12 @@ router:
   worker_pool_size: 20
   channel_buffer: 200
   default_timeout: 30s
+  namespace: default
+  rbac:
+    run_roles: [operator, admin]
+    validate_roles: [viewer, operator, admin]
+    replay_roles: [operator, admin]
+    admin_roles: [admin]
 
 agents:
   - id: summarize_agent

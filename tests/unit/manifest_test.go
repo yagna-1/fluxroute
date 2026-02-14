@@ -96,3 +96,21 @@ func TestValidateManifestRejectsInvalidCircuitResetTimeout(t *testing.T) {
 		t.Fatal("expected invalid circuit breaker duration error")
 	}
 }
+
+func TestValidateManifestRejectsInvalidRBACRole(t *testing.T) {
+	m := config.Manifest{
+		Router: config.RouterSettings{
+			RBAC: config.RBAC{
+				RunRoles: []string{"not-a-role"},
+			},
+		},
+		Agents: []config.AgentBinding{{ID: "a"}},
+		Pipeline: []config.PipelineStep{
+			{Step: "a"},
+		},
+	}
+
+	if err := config.ValidateManifest(m); err == nil {
+		t.Fatal("expected invalid rbac role error")
+	}
+}

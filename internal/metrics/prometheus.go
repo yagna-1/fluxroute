@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/your-org/agent-router/internal/security"
 )
 
 // PrometheusRecorder reports runtime metrics using Prometheus primitives.
@@ -84,6 +86,36 @@ func StartPrometheusServer(addr string, registry *prometheus.Registry) (*http.Se
 	}
 	go func() {
 		_ = srv.Serve(ln)
+	}()
+	return srv, nil
+}
+
+// StartPrometheusServerTLS starts metrics endpoint with optional client-cert auth (mTLS).
+func StartPrometheusServerTLS(addr string, registry *prometheus.Registry, certFile string, keyFile string, caFile string, requireClientCert bool) (*http.Server, error) {
+	if addr == "" {
+		addr = ":2112"
+	}
+	if registry == nil {
+		return nil, fmt.Errorf("prometheus registry is nil")
+	}
+
+	tlsCfg, err := security.BuildServerTLSConfig(certFile, keyFile, caFile, requireClientCert)
+	if err != nil {
+		return nil, err
+	}
+
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("listen metrics endpoint %q: %w", addr, err)
+	}
+	tlsListener := tls.NewListener(ln, tlsCfg)
+
+	srv := &http.Server{
+		Addr:    ln.Addr().String(),
+		Handler: promhttp.HandlerFor(registry, promhttp.HandlerOpts{}),
+	}
+	go func() {
+		_ = srv.Serve(tlsListener)
 	}()
 	return srv, nil
 }

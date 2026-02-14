@@ -26,6 +26,9 @@ It is intentionally scaffold-first: structure, contracts, and development guardr
   - OpenTelemetry spans per invocation
   - Provider adapters for OpenAI, Anthropic, and Gemini
   - SDK runtime API and provider-to-agent helper
+  - RBAC enforcement and audit logging
+  - Namespace isolation and task coordination leases
+  - Control-plane service for tenant provisioning and usage metering
 - Go project scaffold:
   - `cmd/` router and CLI entrypoints
   - `internal/` runtime internals
@@ -71,6 +74,13 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 - `TRACE_OUTPUT=/tmp/run.trace.json` writes deterministic execution trace JSON
 - `METRICS_ENABLED=true` enables Prometheus metrics collection
 - `METRICS_ADDR=127.0.0.1:2112` metrics HTTP bind address (supports `:0`)
+- `METRICS_TLS_ENABLED=true` enables TLS for metrics endpoint
+- `METRICS_TLS_CERT_FILE`, `METRICS_TLS_KEY_FILE`, `METRICS_TLS_CA_FILE`
+- `METRICS_TLS_REQUIRE_CLIENT_CERT=true` enforces mTLS client cert auth
+- `REQUEST_ROLE=viewer|operator|admin` applies RBAC checks for run/validate/replay
+- `AUDIT_LOG_PATH=/tmp/agent-router.audit.log` enables JSONL audit trail
+- `COORDINATION_ENABLED=true` enables task lease locking
+- `COORDINATION_MODE=file|memory`, `COORDINATION_DIR=/tmp/agent-router-coordination`, `COORDINATION_TTL=2m`
 - `WORKER_POOL_SIZE`, `CHANNEL_BUFFER`, `DEFAULT_TIMEOUT`
 - `CIRCUIT_FAILURE_THRESHOLD`, `CIRCUIT_RESET_TIMEOUT`
 
@@ -86,3 +96,15 @@ If `go` is already on your `PATH`, the `Makefile` will use it automatically.
 2. Add benchmark suite against external frameworks.
 3. Design distributed coordination for multi-instance router deployments.
 4. Add multi-tenant namespace isolation and policy enforcement.
+
+## Control Plane
+
+```bash
+make run-controlplane
+```
+
+Endpoints:
+- `POST /tenants` with body `{\"id\":\"tenant-a\"}` and header `X-Role: admin`
+- `GET /tenants`
+- `POST /usage` with body `{\"tenant_id\":\"tenant-a\",\"invocations\":10}` and header `X-Role: admin`
+- `GET /usage?tenant_id=tenant-a`

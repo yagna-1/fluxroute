@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/your-org/agent-router/internal/security"
+	"github.com/your-org/agent-router/internal/tenant"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,6 +28,16 @@ type RouterSettings struct {
 	WorkerPoolSize int    `yaml:"worker_pool_size"`
 	ChannelBuffer  int    `yaml:"channel_buffer"`
 	DefaultTimeout string `yaml:"default_timeout"`
+	Namespace      string `yaml:"namespace"`
+	RBAC           RBAC   `yaml:"rbac"`
+}
+
+// RBAC configures allowed roles per action.
+type RBAC struct {
+	RunRoles      []string `yaml:"run_roles"`
+	ValidateRoles []string `yaml:"validate_roles"`
+	ReplayRoles   []string `yaml:"replay_roles"`
+	AdminRoles    []string `yaml:"admin_roles"`
 }
 
 // AgentBinding declares an agent registration entry.
@@ -78,6 +90,24 @@ func ValidateManifest(m Manifest) error {
 	}
 	if len(m.Pipeline) == 0 {
 		return ErrManifestEmptyPipeline
+	}
+
+	if m.Router.Namespace != "" {
+		if err := tenant.Validate(m.Router.Namespace); err != nil {
+			return fmt.Errorf("manifest: invalid router.namespace: %w", err)
+		}
+	}
+	for _, roles := range [][]string{
+		m.Router.RBAC.RunRoles,
+		m.Router.RBAC.ValidateRoles,
+		m.Router.RBAC.ReplayRoles,
+		m.Router.RBAC.AdminRoles,
+	} {
+		for _, role := range roles {
+			if _, err := security.ParseRole(role); err != nil {
+				return fmt.Errorf("manifest: invalid rbac role %q: %w", role, err)
+			}
+		}
 	}
 
 	agents := make(map[string]struct{}, len(m.Agents))

@@ -2,6 +2,11 @@ router:
   worker_pool_size: 8
   channel_buffer: 32
   default_timeout: 10s
+  namespace: parallel
+  rbac:
+    run_roles: [operator, admin]
+    validate_roles: [viewer, operator, admin]
+    replay_roles: [operator, admin]
 
 agents:
   - id: enrich_agent

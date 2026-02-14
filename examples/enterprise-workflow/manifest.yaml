@@ -2,6 +2,12 @@ router:
   worker_pool_size: 12
   channel_buffer: 64
   default_timeout: 15s
+  namespace: enterprise
+  rbac:
+    run_roles: [operator, admin]
+    validate_roles: [viewer, operator, admin]
+    replay_roles: [operator, admin]
+    admin_roles: [admin]
 
 agents:
   - id: flaky_ingest

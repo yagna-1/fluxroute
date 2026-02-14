@@ -15,18 +15,22 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/your-org/agent-router/internal/agent"
+	"github.com/your-org/agent-router/internal/audit"
 	"github.com/your-org/agent-router/internal/config"
+	"github.com/your-org/agent-router/internal/coordinator"
 	"github.com/your-org/agent-router/internal/metrics"
 	"github.com/your-org/agent-router/internal/router"
+	"github.com/your-org/agent-router/internal/security"
 	"github.com/your-org/agent-router/internal/trace"
 	"github.com/your-org/agent-router/pkg/agentfunc"
 )
 
 // RunReport captures the outputs from one manifest execution.
 type RunReport struct {
-	Results []router.AgentResult
-	Trace   trace.ExecutionTrace
-	Metrics metrics.Snapshot
+	Results   []router.AgentResult
+	Trace     trace.ExecutionTrace
+	Metrics   metrics.Snapshot
+	Namespace string
 }
 
 // RunManifest loads a manifest, executes the pipeline, and writes a summary.
@@ -36,7 +40,7 @@ func RunManifest(manifestPath string, out io.Writer) error {
 		return err
 	}
 
-	fmt.Fprintf(out, "router executed %d invocation(s) from %s\n", len(report.Results), manifestPath)
+	fmt.Fprintf(out, "router executed %d invocation(s) from %s (namespace=%s)\n", len(report.Results), manifestPath, report.Namespace)
 	failed := 0
 	for _, r := range report.Results {
 		if r.Err != nil {
@@ -62,10 +66,33 @@ func RunManifest(manifestPath string, out io.Writer) error {
 }
 
 // RunManifestReport executes the manifest and returns results + trace.
-func RunManifestReport(manifestPath string) (RunReport, error) {
+func RunManifestReport(manifestPath string) (report RunReport, retErr error) {
+	logger := audit.NewLogger(strings.TrimSpace(os.Getenv("AUDIT_LOG_PATH")))
+	actor := currentRole().String()
+	defer func() {
+		status := "success"
+		if retErr != nil {
+			status = "error"
+		}
+		_ = logger.Write(actor, string(security.ActionRun), manifestPath, status, retErr)
+	}()
+
 	manifest, err := config.LoadManifest(manifestPath)
 	if err != nil {
 		return RunReport{}, fmt.Errorf("load manifest: %w", err)
+	}
+
+	policy, err := config.RBACPolicyFromManifest(manifest)
+	if err != nil {
+		return RunReport{}, fmt.Errorf("build rbac policy: %w", err)
+	}
+	if err := authorize(policy, security.ActionRun); err != nil {
+		return RunReport{}, err
+	}
+
+	namespace, err := config.NamespaceFromManifest(manifest)
+	if err != nil {
+		return RunReport{}, fmt.Errorf("namespace: %w", err)
 	}
 
 	registry, err := buildRegistry(manifest)
@@ -79,9 +106,17 @@ func RunManifestReport(manifestPath string) (RunReport, error) {
 		return RunReport{}, fmt.Errorf("build runtime config: %w", err)
 	}
 
-	plan, err := buildExecutionPlan(manifest, runtimeCfg.CircuitBreaker)
+	plan, err := buildExecutionPlan(manifest, namespace, runtimeCfg.CircuitBreaker)
 	if err != nil {
 		return RunReport{}, err
+	}
+
+	lease, err := acquireLeaseIfEnabled(context.Background(), namespace, plan.TaskID)
+	if err != nil {
+		return RunReport{}, err
+	}
+	if lease != nil {
+		defer func() { _ = lease.Release(context.Background()) }()
 	}
 
 	engine := router.NewEngine(registry, runtimeCfg)
@@ -96,19 +131,31 @@ func RunManifestReport(manifestPath string) (RunReport, error) {
 	activeRecorder := metrics.Recorder(metricRecorder)
 	var metricsServer *http.Server
 	if envBool("METRICS_ENABLED") {
-		registry := prometheus.NewRegistry()
-		promRecorder, err := metrics.NewPrometheusRecorder(registry)
+		promRegistry := prometheus.NewRegistry()
+		promRecorder, err := metrics.NewPrometheusRecorder(promRegistry)
 		if err != nil {
 			return RunReport{}, fmt.Errorf("setup prometheus recorder: %w", err)
 		}
 		activeRecorder = metrics.NewMultiRecorder(metricRecorder, promRecorder)
-		metricsServer, err = metrics.StartPrometheusServer(metricsAddr(), registry)
+		if envBool("METRICS_TLS_ENABLED") {
+			metricsServer, err = metrics.StartPrometheusServerTLS(
+				metricsAddr(),
+				promRegistry,
+				os.Getenv("METRICS_TLS_CERT_FILE"),
+				os.Getenv("METRICS_TLS_KEY_FILE"),
+				os.Getenv("METRICS_TLS_CA_FILE"),
+				envBool("METRICS_TLS_REQUIRE_CLIENT_CERT"),
+			)
+		} else {
+			metricsServer, err = metrics.StartPrometheusServer(metricsAddr(), promRegistry)
+		}
 		if err != nil {
 			return RunReport{}, fmt.Errorf("start metrics endpoint: %w", err)
 		}
 		defer func() { _ = metrics.StopServer(context.Background(), metricsServer) }()
 	}
 	engine.SetMetricsRecorder(activeRecorder)
+
 	results, execTrace := engine.RunPlan(context.Background(), plan)
 
 	if tracePath := os.Getenv("TRACE_OUTPUT"); tracePath != "" {
@@ -117,20 +164,51 @@ func RunManifestReport(manifestPath string) (RunReport, error) {
 		}
 	}
 
-	return RunReport{Results: results, Trace: execTrace, Metrics: metricRecorder.Snapshot()}, nil
+	return RunReport{Results: results, Trace: execTrace, Metrics: metricRecorder.Snapshot(), Namespace: namespace}, nil
 }
 
 // ValidateManifest loads and validates a manifest only.
-func ValidateManifest(manifestPath string) error {
-	_, err := config.LoadManifest(manifestPath)
+func ValidateManifest(manifestPath string) (retErr error) {
+	logger := audit.NewLogger(strings.TrimSpace(os.Getenv("AUDIT_LOG_PATH")))
+	actor := currentRole().String()
+	defer func() {
+		status := "success"
+		if retErr != nil {
+			status = "error"
+		}
+		_ = logger.Write(actor, string(security.ActionValidate), manifestPath, status, retErr)
+	}()
+
+	manifest, err := config.LoadManifest(manifestPath)
 	if err != nil {
 		return fmt.Errorf("validate manifest: %w", err)
+	}
+	policy, err := config.RBACPolicyFromManifest(manifest)
+	if err != nil {
+		return fmt.Errorf("validate manifest policy: %w", err)
+	}
+	if err := authorize(policy, security.ActionValidate); err != nil {
+		return err
 	}
 	return nil
 }
 
 // ReplayTrace loads a trace and compares replay output against recorded output.
-func ReplayTrace(tracePath string, out io.Writer) error {
+func ReplayTrace(tracePath string, out io.Writer) (retErr error) {
+	logger := audit.NewLogger(strings.TrimSpace(os.Getenv("AUDIT_LOG_PATH")))
+	actor := currentRole().String()
+	defer func() {
+		status := "success"
+		if retErr != nil {
+			status = "error"
+		}
+		_ = logger.Write(actor, string(security.ActionReplay), tracePath, status, retErr)
+	}()
+
+	if err := authorize(security.DefaultPolicy(), security.ActionReplay); err != nil {
+		return err
+	}
+
 	tr, err := trace.LoadFromFile(tracePath)
 	if err != nil {
 		return fmt.Errorf("load trace: %w", err)
@@ -202,7 +280,7 @@ func deterministicAgent(agentID string) agentfunc.AgentFunc {
 	}
 }
 
-func buildExecutionPlan(manifest config.Manifest, defaultCB agentfunc.CircuitBreakerPolicy) (router.ExecutionPlan, error) {
+func buildExecutionPlan(manifest config.Manifest, namespace string, defaultCB agentfunc.CircuitBreakerPolicy) (router.ExecutionPlan, error) {
 	orderedSteps, err := config.OrderedPipeline(manifest)
 	if err != nil {
 		return router.ExecutionPlan{}, fmt.Errorf("order pipeline: %w", err)
@@ -226,7 +304,7 @@ func buildExecutionPlan(manifest config.Manifest, defaultCB agentfunc.CircuitBre
 		invocationIDByStep[step.Step] = invID
 	}
 
-	taskID := "task_demo"
+	taskID := namespace + ".task_demo"
 	for i, step := range orderedSteps {
 		depends := make([]string, 0, 1)
 		if step.DependsOn != "" {
@@ -242,6 +320,7 @@ func buildExecutionPlan(manifest config.Manifest, defaultCB agentfunc.CircuitBre
 					Payload:   []byte(`{"message":"hello"}`),
 					Metadata: map[string]string{
 						"pipeline_step": step.Step,
+						"namespace":     namespace,
 					},
 					Timestamp: time.Now(),
 				},
@@ -286,6 +365,7 @@ func emitStructuredLogs(out io.Writer, report RunReport) {
 			"task_id":     r.Invocation.Input.TaskID,
 			"request_id":  r.Invocation.Input.RequestID,
 			"agent_id":    r.Invocation.AgentID,
+			"namespace":   report.Namespace,
 			"attempt":     1,
 			"duration_ms": r.Output.Duration.Milliseconds(),
 			"status":      status,
@@ -297,6 +377,52 @@ func emitStructuredLogs(out io.Writer, report RunReport) {
 			fmt.Fprintln(out, string(b))
 		}
 	}
+}
+
+func currentRole() security.Role {
+	if r, err := security.ParseRole(os.Getenv("REQUEST_ROLE")); err == nil {
+		return r
+	}
+	return security.RoleOperator
+}
+
+func authorize(policy security.Policy, action security.Action) error {
+	role := currentRole()
+	if !policy.IsAllowed(role, action) {
+		return fmt.Errorf("rbac denied: role %q cannot perform %q", role, action)
+	}
+	return nil
+}
+
+func acquireLeaseIfEnabled(ctx context.Context, namespace string, taskID string) (coordinator.Lease, error) {
+	if !envBool("COORDINATION_ENABLED") {
+		return nil, nil
+	}
+	mode := strings.TrimSpace(strings.ToLower(os.Getenv("COORDINATION_MODE")))
+	if mode == "" {
+		mode = "file"
+	}
+	var coord coordinator.Coordinator
+	switch mode {
+	case "memory":
+		coord = coordinator.NewMemoryCoordinator()
+	default:
+		coord = coordinator.NewFileCoordinator(os.Getenv("COORDINATION_DIR"))
+	}
+
+	ttl := 2 * time.Minute
+	if v := strings.TrimSpace(os.Getenv("COORDINATION_TTL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			ttl = d
+		}
+	}
+
+	key := namespace + "-" + strings.ReplaceAll(taskID, ".", "_")
+	lease, err := coord.Acquire(ctx, key, ttl)
+	if err != nil {
+		return nil, fmt.Errorf("coordination acquire failed: %w", err)
+	}
+	return lease, nil
 }
 
 func envBool(key string) bool {
