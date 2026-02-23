@@ -3,7 +3,7 @@
 
   <p>
     <a href="https://github.com/yagna-1/fluxroute/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/yagna-1/fluxroute/actions/workflows/ci.yml/badge.svg" /></a>
-    <img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white" />
+    <img alt="Go" src="https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white" />
     <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-2ea44f" />
     <img alt="Runtime" src="https://img.shields.io/badge/Runtime-Deterministic-0ea5e9" />
     <img alt="Observability" src="https://img.shields.io/badge/Observability-OTel%20%7C%20Prometheus%20%7C%20Jaeger-f59e0b" />
@@ -40,7 +40,7 @@
   }
 }}%%
 flowchart LR
-    C[Client / SDK / CLI] --> API[Router API\n/run /validate /replay]
+    C[Client / SDK / CLI] --> API[Router API\n/v1/run /v1/validate /v1/replay\n(legacy aliases: /run /validate /replay)]
     API --> CFG[Manifest + RBAC + Namespace]
     CFG --> ENG[Router Engine\nDispatcher / Executor / Aggregator]
 
@@ -84,7 +84,7 @@ sequenceDiagram
     participant T as Trace
     participant X as Metrics
 
-    U->>R: POST /run {manifest_path}
+    U->>R: POST /v1/run {manifest_path}
     R->>M: Load + validate manifest (DAG/RBAC/namespace)
     M-->>R: Validated config
     R->>E: Build execution plan
@@ -130,7 +130,7 @@ flowchart TD
 
 ```bash
 cd <repo-root>
-~/.local/go1.26.0/bin/go mod tidy
+go mod tidy
 make test
 make lint
 make build
