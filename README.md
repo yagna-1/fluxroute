@@ -284,9 +284,6 @@ go run ./cmd/controlplane version
 - `docs/start-here.md`
 - `docs/positioning.md`
 - `docs/buyer-architecture-narrative.md`
-- `docs/end-user-goals.md`
-- `docs/development-blueprint.md`
-- `docs/goal-to-dev-traceability.md`
 - `docs/operations.md`
 - `docs/runbooks/tenant-onboarding.md`
 - `docs/runbooks/incident-replay.md`
@@ -296,4 +293,3 @@ go run ./cmd/controlplane version
 - `docs/benchmark-external-2026-02-23.md`
 - `docs/sdk-quickstart.md`
 - `docs/release-checklist.md`
-- `docs/requirement-verification-2026-02-14.md`
