@@ -23,4 +23,5 @@
 2. Run `demo/README.md` end-to-end.
 3. Review benchmark and comparison docs:
 - `docs/benchmark-baseline-2026-02-14.md`
+- `docs/benchmark-external-2026-02-23.md`
 - `docs/competitive-proof.md`

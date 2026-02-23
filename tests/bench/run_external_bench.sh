@@ -22,8 +22,10 @@ JSON_OUT="$OUT_DIR/external-bench-$TS.json"
 CSV_OUT="$OUT_DIR/external-bench-$TS.csv"
 
 python tests/bench/external/bench_external.py \
-  --iterations 20 \
-  --warmup 3 \
+  --iterations 8 \
+  --warmup 2 \
+  --samples 3 \
+  --frameworks langgraph,prefect,temporal,inngest \
   --out-json "$JSON_OUT" \
   --out-csv "$CSV_OUT"
 

@@ -242,6 +242,17 @@ flowchart TB
 - Local stack definition: `deploy/observability/docker-compose.yml`
 - Dashboard JSON: `deploy/observability/grafana/dashboards/fluxroute-overview.json`
 
+## Benchmark snapshot
+
+- Baseline (Go): see `tests/bench/out/latest.csv` via `./tests/bench/run_bench.sh`
+- External parity harness: `./tests/bench/run_external_bench.sh`
+- Latest published report: `docs/benchmark-external-2026-02-23.md`
+
+Current external report includes:
+- Frameworks: LangGraph, Prefect, Temporal, Inngest
+- Scenarios: `sequential10`, `parallel100`, `ai_chain10`
+- Metrics: startup, first-run, steady-state throughput with 95% CI, latency percentiles, memory
+
 ## Configuration highlights
 
 - Tracing: `TRACE_ENABLED`, `TRACE_ENDPOINT`, `TRACE_OUTPUT`
