@@ -40,7 +40,7 @@
   }
 }}%%
 flowchart LR
-    C[Client / SDK / CLI] --> API[Router API\n/v1/run /v1/validate /v1/replay\n(legacy aliases: /run /validate /replay)]
+    C[Client / SDK / CLI] --> API["Router API<br/>/v1/run /v1/validate /v1/replay<br/>legacy aliases: /run /validate /replay"]
     API --> CFG[Manifest + RBAC + Namespace]
     CFG --> ENG[Router Engine\nDispatcher / Executor / Aggregator]
 
