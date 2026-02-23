@@ -14,15 +14,20 @@ import (
 
 func RouterHandler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	register := func(path string, h http.HandlerFunc) {
+		mux.HandleFunc(path, h)
+		mux.HandleFunc("/v1"+path, h)
+	}
+
+	register("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	register("/readyz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ready"))
 	})
-	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
+	register("/run", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -43,7 +48,7 @@ func RouterHandler() http.Handler {
 		}
 		w.WriteHeader(http.StatusAccepted)
 	})
-	mux.HandleFunc("/validate", func(w http.ResponseWriter, r *http.Request) {
+	register("/validate", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -64,7 +69,7 @@ func RouterHandler() http.Handler {
 		}
 		w.WriteHeader(http.StatusOK)
 	})
-	mux.HandleFunc("/replay", func(w http.ResponseWriter, r *http.Request) {
+	register("/replay", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return

@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/your-org/fluxroute/internal/controlplane"
 )
 
 func TestControlplaneHandler(t *testing.T) {
+	t.Setenv("CONTROLPLANE_API_KEY", "")
 	svc := controlplane.NewService()
 	h := svc.Handler()
 
@@ -76,6 +78,37 @@ func TestControlplaneHandler(t *testing.T) {
 	if !bytes.Contains(w.Body.Bytes(), []byte("slo_target")) {
 		t.Fatalf("expected sla payload, got %s", w.Body.String())
 	}
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/tenants", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /v1/tenants, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/usage?page=1&page_size=10", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for paginated usage listing, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/billing/invoice?tenant_id=tenant-a&format=csv", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for invoice csv, got %d", w.Code)
+	}
+	if ctype := w.Header().Get("Content-Type"); ctype != "text/csv" {
+		t.Fatalf("expected text/csv content type, got %q", ctype)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/billing/summary", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /v1/billing/summary, got %d", w.Code)
+	}
 }
 
 func TestControlplaneRBACDenied(t *testing.T) {
@@ -89,5 +122,76 @@ func TestControlplaneRBACDenied(t *testing.T) {
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestControlplaneAPIKeyMiddleware(t *testing.T) {
+	t.Setenv("CONTROLPLANE_API_KEY", "top-secret")
+	svc := controlplane.NewService()
+	h := svc.Handler()
+
+	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without api key, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/tenants", nil)
+	req.Header.Set("X-API-Key", "top-secret")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 with valid api key, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/tenants", nil)
+	req.Header.Set("Authorization", "Bearer top-secret")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 with bearer api key, got %d", w.Code)
+	}
+}
+
+func TestControlplaneBillingSummary(t *testing.T) {
+	t.Setenv("CONTROLPLANE_API_KEY", "")
+	svc := controlplane.NewService()
+	if err := svc.AddTenant("tenant-s"); err != nil {
+		t.Fatalf("add tenant: %v", err)
+	}
+	now := time.Now().UTC()
+	month := now.Format("2006-01")
+	if err := svc.AddUsageAt("tenant-s", 7, now); err != nil {
+		t.Fatalf("add usage at: %v", err)
+	}
+
+	h := svc.Handler()
+	req := httptest.NewRequest(http.MethodGet, "/billing/summary?month="+month, nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for billing summary, got %d", w.Code)
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte("\"grand_total_invocations\":7")) {
+		t.Fatalf("expected summary total in response, got %s", w.Body.String())
+	}
+}
+
+func TestControlplaneRejectsNonPositiveUsage(t *testing.T) {
+	t.Setenv("CONTROLPLANE_API_KEY", "")
+	svc := controlplane.NewService()
+	if err := svc.AddTenant("tenant-x"); err != nil {
+		t.Fatalf("add tenant: %v", err)
+	}
+
+	h := svc.Handler()
+	usageBody, _ := json.Marshal(map[string]any{"tenant_id": "tenant-x", "invocations": 0})
+	req := httptest.NewRequest(http.MethodPost, "/usage", bytes.NewReader(usageBody))
+	req.Header.Set("X-Role", "admin")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for non-positive usage, got %d", w.Code)
 	}
 }

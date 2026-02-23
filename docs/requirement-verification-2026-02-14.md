@@ -1,8 +1,8 @@
 # Requirement Verification (2026-02-14)
 
 Sources:
-- `../AgentRouter_DevTeam_Report.txt`
-- `../AgentRouter_YC_Report_Full.txt`
+- `../../AgentRouter_DevTeam_Report.txt`
+- `../../AgentRouter_YC_Report_Full.txt`
 
 ## Dev Team report status
 
@@ -30,6 +30,7 @@ Sources:
 - [x] Local trace viewer stack (`deploy/observability/docker-compose.yml`, `Makefile:trace-view`)
 - [x] LLM adapters (OpenAI/Anthropic/Gemini)
 - [x] SDK package (`pkg/sdk`)
+- [x] Python + TypeScript SDK skeletons (`sdk/python`, `sdk/typescript`)
 - [x] Example pipelines (`examples/*`)
 - [~] Docs website: not implemented as external hosted site; in-repo docs are present
 
@@ -80,7 +81,18 @@ Sources:
 ### Q4 Managed Service & Scale
 
 - [x] Managed-control-plane building blocks (tenant + usage + billing)
+- [x] Control-plane hardening slice (`/v1` aliases, API key auth baseline, pagination/filtering, billing summary, CSV invoices)
 - [~] Beta launch, fundraising, customer-success operations: business execution outside source code
+
+## FluxRoute completion plan artifacts
+
+- [x] Positioning narrative and buyer architecture docs (`docs/positioning.md`, `docs/buyer-architecture-narrative.md`)
+- [x] Killer demo scripts and walkthrough (`demo/README.md`, `demo/scripts/*`)
+- [x] SaaS operator runbooks (`docs/runbooks/*`)
+- [x] OpenAPI specs for router and control-plane APIs (`docs/openapi/*`)
+- [x] Benchmark baseline report + export harness (`docs/benchmark-baseline-2026-02-14.md`, `tests/bench/run_bench.sh`)
+- [x] Competitive proof + explicit non-fit section (`docs/competitive-proof.md`)
+- [x] Persona-based docs entrypoint (`docs/start-here.md`)
 
 ## Conclusion
 

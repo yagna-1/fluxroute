@@ -1,0 +1,332 @@
+openapi: 3.1.0
+info:
+  title: FluxRoute Control Plane API
+  version: 1.0.0
+  description: |
+    FluxRoute control-plane API for tenant lifecycle, usage metering, and billing.
+    Legacy non-versioned routes are maintained as aliases.
+servers:
+  - url: http://localhost:8081
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+paths:
+  /v1/healthz:
+    get:
+      summary: Liveness probe
+      security: []
+      responses:
+        '200':
+          description: Service is live
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+  /v1/readyz:
+    get:
+      summary: Readiness probe
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ready
+  /v1/sla:
+    get:
+      summary: SLA telemetry snapshot
+      security: []
+      responses:
+        '200':
+          description: Current SLA stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uptime_seconds:
+                    type: integer
+                  total_requests:
+                    type: integer
+                  slo_target:
+                    type: string
+  /v1/tenants:
+    get:
+      summary: List tenants
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Paginated tenant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantsResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create tenant (admin role)
+      parameters:
+        - $ref: '#/components/parameters/XRoleHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        '201':
+          description: Tenant created
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '403':
+          description: RBAC denied
+  /v1/usage:
+    get:
+      summary: Get usage
+      parameters:
+        - name: tenant_id
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Tenant usage response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SingleUsageResponse'
+                  - $ref: '#/components/schemas/UsageListResponse'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Add usage events (admin role)
+      parameters:
+        - $ref: '#/components/parameters/XRoleHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, invocations]
+              properties:
+                tenant_id:
+                  type: string
+                invocations:
+                  type: integer
+                  minimum: 1
+      responses:
+        '202':
+          description: Usage accepted
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '403':
+          description: RBAC denied
+  /v1/billing/rates:
+    get:
+      summary: Get active billing rate
+      responses:
+        '200':
+          description: Active rate card
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usd_per_thousand:
+                    type: number
+    post:
+      summary: Update billing rate (admin role)
+      parameters:
+        - $ref: '#/components/parameters/XRoleHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [usd_per_thousand]
+              properties:
+                usd_per_thousand:
+                  type: number
+                  exclusiveMinimum: 0
+      responses:
+        '202':
+          description: Rate update accepted
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '403':
+          description: RBAC denied
+  /v1/billing/invoice:
+    get:
+      summary: Generate invoice for tenant
+      parameters:
+        - name: tenant_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Invoice payload in JSON or CSV
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+            text/csv:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+  /v1/billing/summary:
+    get:
+      summary: Monthly usage summary by tenant
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: '^\\d{4}-\\d{2}$'
+            example: '2026-02'
+      responses:
+        '200':
+          description: Monthly summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSummaryResponse'
+        '400':
+          description: Invalid month format
+        '401':
+          description: Unauthorized
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+  parameters:
+    XRoleHeader:
+      name: X-Role
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [admin]
+  schemas:
+    TenantUsage:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        invocations:
+          type: integer
+    SingleUsageResponse:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        invocations:
+          type: integer
+    UsageListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantUsage'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+    TenantsResponse:
+      type: object
+      properties:
+        tenants:
+          type: array
+          items:
+            type: string
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+    Invoice:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        invocations:
+          type: integer
+        usd_per_thousand:
+          type: number
+        amount_usd:
+          type: number
+    BillingSummaryResponse:
+      type: object
+      properties:
+        month:
+          type: string
+        totals:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantUsage'
+        grand_total_invocations:
+          type: integer

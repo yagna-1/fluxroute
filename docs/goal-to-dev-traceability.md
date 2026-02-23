@@ -9,6 +9,8 @@ This maps end-user value to concrete engineering workstreams.
 | High concurrency without chaos | Worker pools + buffered channels + backpressure | `internal/router`, `internal/channel`, `internal/config` | Stable latency under concurrent benchmark load |
 | Safe failure behavior | Retry policy + panic recovery + circuit breaker | `internal/retry`, `internal/router` | Error classes handled without router crash |
 | Fast enterprise adoption | Manifest validation + clear API contracts | `internal/config`, `pkg/agentfunc`, `pkg/sdk` | Invalid manifest fails fast with actionable error |
+| Multi-tenant SaaS operations | Tenant APIs + usage metering + invoice generation | `internal/controlplane`, `internal/billing`, `docs/runbooks` | Tenant lifecycle + usage + invoice flow works end-to-end |
+| Cross-language integration | Python + TypeScript SDK clients | `sdk/python`, `sdk/typescript` | Non-Go app can call runtime + control-plane APIs quickly |
 | Lightweight deployment | Static binary + minimal runtime dependencies | `cmd/router`, `Makefile`, container build | Binary runs in scratch image |
 
 ## Prioritized implementation sequence
@@ -19,4 +21,3 @@ This maps end-user value to concrete engineering workstreams.
 4. Observability: logging/tracing/metrics + replay recorder.
 5. CLI and SDK ergonomics.
 6. Enterprise hardening features.
-

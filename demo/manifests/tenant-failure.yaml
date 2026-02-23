@@ -1,0 +1,23 @@
+router:
+  worker_pool_size: 10
+  channel_buffer: 50
+  default_timeout: 10s
+  namespace: tenant-a
+  rbac:
+    run_roles: [operator, admin]
+    validate_roles: [viewer, operator, admin]
+    replay_roles: [operator, admin]
+    admin_roles: [admin]
+
+agents:
+  - id: fail_payment_agent
+    retry:
+      max_attempts: 1
+      backoff: linear
+    circuit_breaker:
+      failure_threshold: 1
+      reset_timeout: 30s
+      probe_timeout: 2s
+
+pipeline:
+  - step: fail_payment_agent

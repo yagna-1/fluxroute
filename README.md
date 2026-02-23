@@ -9,16 +9,15 @@
     <img alt="Observability" src="https://img.shields.io/badge/Observability-OTel%20%7C%20Prometheus%20%7C%20Jaeger-f59e0b" />
   </p>
 
-  <p><strong>FluxRoute</strong> is a deterministic, channel-based AI orchestration runtime in Go.</p>
+  <p><strong>FluxRoute</strong> is an AI-native orchestration runtime + control plane for deterministic replay and tenant-aware billing.</p>
 </div>
 
 ## Why FluxRoute
 
-- Deterministic DAG execution with replay validation.
-- Explicit state, strict manifest validation, and no hidden framework magic.
-- Built-in resilience: retry filtering, circuit breaker with half-open probe timeout, and panic containment.
-- Production-friendly observability: JSON logs, OpenTelemetry, Prometheus, audit export.
-- Enterprise primitives: RBAC, namespace isolation, coordination leases, control-plane APIs.
+- Deterministic replay + divergence debugging: trace capture, replay validation, and diff tooling.
+- Multi-tenant control-plane primitives: tenant lifecycle APIs, RBAC enforcement, namespace isolation.
+- Built-in metering and billing path: usage endpoints, monthly summary, JSON/CSV invoice export.
+- Production observability + resilience: OTel, Prometheus, Jaeger, retries, circuit breaker, panic containment.
 
 ## Animated identity
 
@@ -140,6 +139,30 @@ make build-controlplane
 make run
 ```
 
+## Start Here By Persona
+
+- App developer: `docs/start-here.md` (run/validate/replay + scaffold path)
+- Platform engineer: `docs/start-here.md` + runbooks in `docs/runbooks/`
+- Buyer/evaluator: `docs/positioning.md`, `docs/buyer-architecture-narrative.md`, `demo/README.md`
+
+## Killer Demo (Multi-tenant Billing Sandbox)
+
+```bash
+./demo/scripts/00_start_services.sh
+./demo/scripts/01_provision_tenants.sh
+./demo/scripts/02_run_workflows.sh
+./demo/scripts/03_replay_and_billing.sh
+./demo/scripts/05_stop_services.sh
+```
+
+Optional resilience segment:
+
+```bash
+./demo/scripts/04_resilience_failure_case.sh
+```
+
+Artifacts are written under `demo/output/`.
+
 ## Core commands
 
 | Goal | Command |
@@ -151,6 +174,7 @@ make run
 | Replay deterministic trace | `make replay MANIFEST_PATH=trace.json` |
 | Scaffold starter pipeline | `make scaffold TARGET_DIR=./generated PIPELINE_NAME=myflow` |
 | Compare expected vs actual traces | `make debug EXPECTED_TRACE=a.json ACTUAL_TRACE=b.json` |
+| Machine-readable CLI output | `go run ./cmd/cli --json validate configs/router.example.yaml` |
 | Start control plane | `make run-controlplane` |
 | Benchmark router paths | `make bench` |
 | Observability stack up/down | `make trace-view` / `make trace-down` |
@@ -163,26 +187,42 @@ make run
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/healthz` | Liveness |
-| `GET` | `/readyz` | Readiness |
-| `POST` | `/run` | Run manifest (`{"manifest_path":"..."}`) |
-| `POST` | `/validate` | Validate manifest (`{"manifest_path":"..."}`) |
-| `POST` | `/replay` | Replay trace (`{"trace_path":"..."}`) |
+| `GET` | `/v1/healthz` | Liveness (`/healthz` alias) |
+| `GET` | `/v1/readyz` | Readiness (`/readyz` alias) |
+| `POST` | `/v1/run` | Run manifest (`{"manifest_path":"..."}`) |
+| `POST` | `/v1/validate` | Validate manifest (`{"manifest_path":"..."}`) |
+| `POST` | `/v1/replay` | Replay trace (`{"trace_path":"..."}`) |
 
 ### Control plane (`cmd/controlplane`)
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/healthz` | Liveness |
-| `GET` | `/readyz` | Readiness |
-| `GET` | `/sla` | SLA telemetry snapshot |
-| `POST` | `/tenants` | Create tenant (admin) |
-| `GET` | `/tenants` | List tenants |
-| `POST` | `/usage` | Add usage (admin) |
-| `GET` | `/usage?tenant_id=...` | Read tenant usage |
-| `GET` | `/billing/rates` | Get pricing |
-| `POST` | `/billing/rates` | Update pricing (admin) |
-| `GET` | `/billing/invoice?tenant_id=...` | Generate invoice view |
+| `GET` | `/v1/healthz` | Liveness (`/healthz` alias) |
+| `GET` | `/v1/readyz` | Readiness (`/readyz` alias) |
+| `GET` | `/v1/sla` | SLA telemetry snapshot |
+| `POST` | `/v1/tenants` | Create tenant (admin role) |
+| `GET` | `/v1/tenants` | List tenants (`q`, `page`, `page_size`) |
+| `POST` | `/v1/usage` | Add usage (admin role) |
+| `GET` | `/v1/usage` | Read usage (`tenant_id` or paginated list) |
+| `GET` | `/v1/billing/rates` | Get pricing |
+| `POST` | `/v1/billing/rates` | Update pricing (admin role) |
+| `GET` | `/v1/billing/invoice?tenant_id=...&format=json|csv` | Generate invoice view |
+| `GET` | `/v1/billing/summary?month=YYYY-MM` | Monthly usage totals |
+
+Control-plane auth baseline:
+- Configure `CONTROLPLANE_API_KEY` to require API auth.
+- Clients can send `X-API-Key: <key>` or `Authorization: Bearer <key>`.
+- Mutating endpoints require `X-Role: admin`.
+
+OpenAPI specs:
+- `docs/openapi/router-v1.yaml`
+- `docs/openapi/controlplane-v1.yaml`
+
+## SDKs
+
+- Go SDK: `pkg/sdk`
+- Python SDK (preview): `sdk/python`
+- TypeScript SDK (preview, ESM + CJS build): `sdk/typescript`
 
 ## Observability stack
 
@@ -230,9 +270,18 @@ go run ./cmd/controlplane version
 
 ## Documentation map
 
+- `docs/start-here.md`
+- `docs/positioning.md`
+- `docs/buyer-architecture-narrative.md`
 - `docs/end-user-goals.md`
 - `docs/development-blueprint.md`
 - `docs/goal-to-dev-traceability.md`
 - `docs/operations.md`
+- `docs/runbooks/tenant-onboarding.md`
+- `docs/runbooks/incident-replay.md`
+- `docs/runbooks/billing-reconciliation.md`
+- `docs/competitive-proof.md`
+- `docs/benchmark-baseline-2026-02-14.md`
+- `docs/sdk-quickstart.md`
 - `docs/release-checklist.md`
 - `docs/requirement-verification-2026-02-14.md`

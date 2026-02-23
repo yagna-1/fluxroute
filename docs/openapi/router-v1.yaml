@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: FluxRoute Router API
+  version: 1.0.0
+  description: |
+    FluxRoute router runtime API.
+    Legacy non-versioned routes (`/run`, `/validate`, `/replay`, `/healthz`, `/readyz`) are maintained as aliases.
+servers:
+  - url: http://localhost:8080
+paths:
+  /v1/healthz:
+    get:
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Service is live
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+  /v1/readyz:
+    get:
+      summary: Readiness probe
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ready
+  /v1/run:
+    post:
+      summary: Execute manifest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManifestRequest'
+      responses:
+        '202':
+          description: Manifest accepted for execution
+        '400':
+          description: Invalid request or manifest
+          content:
+            text/plain:
+              schema:
+                type: string
+  /v1/validate:
+    post:
+      summary: Validate manifest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManifestRequest'
+      responses:
+        '200':
+          description: Manifest is valid
+        '400':
+          description: Invalid request or manifest
+          content:
+            text/plain:
+              schema:
+                type: string
+  /v1/replay:
+    post:
+      summary: Replay and compare trace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplayRequest'
+      responses:
+        '200':
+          description: Replay matched recorded outputs
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Invalid request or replay mismatch
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    ManifestRequest:
+      type: object
+      properties:
+        manifest_path:
+          type: string
+          example: demo/manifests/tenant-a.yaml
+    ReplayRequest:
+      type: object
+      required: [trace_path]
+      properties:
+        trace_path:
+          type: string
+          example: demo/output/latest-trace.json

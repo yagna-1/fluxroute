@@ -26,6 +26,13 @@ func TestRouterHandlerHealthAndReady(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 for readyz, got %d", w.Code)
 	}
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/healthz", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /v1/healthz, got %d", w.Code)
+	}
 }
 
 func TestRouterHandlerValidateRejectsMissingBody(t *testing.T) {
@@ -35,6 +42,13 @@ func TestRouterHandlerValidateRejectsMissingBody(t *testing.T) {
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for invalid json, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/v1/validate", bytes.NewReader([]byte("{")))
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid json on /v1/validate, got %d", w.Code)
 	}
 }
 

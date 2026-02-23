@@ -7,8 +7,8 @@
 - Version: `go run ./cmd/router --version`
 
 Router health endpoints in server mode:
-- `GET /healthz`
-- `GET /readyz`
+- `GET /healthz` (alias: `/v1/healthz`)
+- `GET /readyz` (alias: `/v1/readyz`)
 
 ## CLI workflows
 
@@ -16,6 +16,7 @@ Router health endpoints in server mode:
 - Replay trace: `make replay MANIFEST_PATH=trace.json`
 - Scaffold starter pipeline: `make scaffold TARGET_DIR=./generated PIPELINE_NAME=demo`
 - Compare two traces: `make debug EXPECTED_TRACE=a.json ACTUAL_TRACE=b.json`
+- Machine-readable output: `go run ./cmd/cli --json <command> ...`
 
 ## Control plane
 
@@ -23,7 +24,19 @@ Router health endpoints in server mode:
 - Version: `go run ./cmd/controlplane version`
 - Health: `GET /healthz`, `GET /readyz`
 - SLA hook: `GET /sla`
-- Billing APIs: `/billing/rates`, `/billing/invoice`
+- Versioned API aliases: `/v1/*`
+
+Core endpoints:
+- `GET/POST /v1/tenants` (supports `q`, `page`, `page_size`)
+- `GET/POST /v1/usage` (supports tenant and paginated listing)
+- `GET/POST /v1/billing/rates`
+- `GET /v1/billing/invoice?tenant_id=...&format=json|csv`
+- `GET /v1/billing/summary?month=YYYY-MM`
+
+Auth baseline:
+- Set `CONTROLPLANE_API_KEY` to enforce API key auth.
+- Client headers: `X-API-Key: <key>` or `Authorization: Bearer <key>`.
+- Admin mutating routes require `X-Role: admin`.
 
 ## Observability
 
@@ -43,7 +56,7 @@ Recommended local env for router telemetry:
 ## Linting
 
 - Preferred: `golangci-lint` installed locally, then run `make lint`
-- Fallback: `make lint` automatically runs `golangci/golangci-lint` in Docker when local binary is unavailable
+- Fallback: `make lint` runs `golangci/golangci-lint` in Docker when local binary is unavailable
 
 ## Coordination modes
 
@@ -57,3 +70,9 @@ Recommended local env for router telemetry:
 - Apply manifests: `make k8s-apply`
 - Delete manifests: `make k8s-delete`
 - Base config: `deploy/k8s/kustomization.yaml`
+
+## Runbooks
+
+- Tenant onboarding: `docs/runbooks/tenant-onboarding.md`
+- Incident/replay: `docs/runbooks/incident-replay.md`
+- Billing reconciliation: `docs/runbooks/billing-reconciliation.md`

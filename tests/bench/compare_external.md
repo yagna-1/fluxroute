@@ -1,17 +1,18 @@
 # External Benchmark Comparison Guide
 
-This repository includes internal router benchmarks via `make bench`.
+This repository includes internal router benchmarks (`make bench`) and a reproducible exporter script (`./tests/bench/run_bench.sh`).
 
-To compare with external frameworks (LangGraph/AutoGen), run equivalent workloads in a separate benchmark harness and capture at least:
+For external framework comparison (LangGraph/Temporal/Inngest/Prefect), capture at minimum:
 - Throughput (requests/sec)
 - P50/P95/P99 latency
 - Peak RSS memory
 - CPU utilization
 
-Recommended process:
-1. Use the same task graph shape as `tests/bench/router_benchmark_test.go`.
-2. Run each framework for warmup + steady-state windows.
-3. Store results in CSV and include machine specs.
-4. Check in a benchmark report under `docs/` with reproducible commands.
+Method:
+1. Reuse the same graph shape as `tests/bench/router_benchmark_test.go`.
+2. Run warmup and fixed-duration steady-state windows.
+3. Pin identical hardware and runtime constraints.
+4. Store raw outputs + CSV under `tests/bench/out`.
+5. Publish summary under `docs/benchmark-baseline-*.md`.
 
-This is intentionally separate because external framework benchmarks require Python runtime + framework-specific harnesses.
+See `docs/benchmark-baseline-2026-02-14.md` for the current internal baseline.

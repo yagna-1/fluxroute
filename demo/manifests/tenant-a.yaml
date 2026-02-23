@@ -1,0 +1,29 @@
+router:
+  worker_pool_size: 20
+  channel_buffer: 100
+  default_timeout: 30s
+  namespace: tenant-a
+  rbac:
+    run_roles: [operator, admin]
+    validate_roles: [viewer, operator, admin]
+    replay_roles: [operator, admin]
+    admin_roles: [admin]
+
+agents:
+  - id: flaky_summarize_agent
+    retry:
+      max_attempts: 2
+      backoff: linear
+    circuit_breaker:
+      failure_threshold: 5
+      reset_timeout: 60s
+      probe_timeout: 5s
+  - id: classify_agent
+    retry:
+      max_attempts: 2
+      backoff: linear
+
+pipeline:
+  - step: flaky_summarize_agent
+  - step: classify_agent
+    depends_on: flaky_summarize_agent

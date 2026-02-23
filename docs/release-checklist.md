@@ -8,3 +8,6 @@
 6. Validate control-plane health endpoints and metrics endpoint.
 7. Validate `make trace-view` stack (Prometheus/Grafana/Jaeger) boots cleanly.
 8. Validate `make k8s-apply` manifests render and apply in a staging cluster.
+9. Run `demo/scripts/record-demo.sh` and confirm artifacts are produced under `demo/output/`.
+10. Validate OpenAPI specs in `docs/openapi/` match the current handlers.
+11. Smoke test SDK examples in `sdk/python/examples` and `sdk/typescript/examples`.
