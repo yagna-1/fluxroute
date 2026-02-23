@@ -59,7 +59,7 @@ Sources:
 - [x] Core runtime
 - [x] Agent interface standardization
 - [x] Structured logging
-- [~] Benchmark suite vs LangGraph/AutoGen: benchmark framework included, external harness guide included, but external execution data is not checked in
+- [x] Benchmark suite vs external frameworks: external harness + published execution data included (`tests/bench/run_external_bench.sh`, `docs/benchmark-external-2026-02-23.md`)
 - [~] Public GitHub repository + hosted docs site: repo is implementation-ready locally; external publication is not in this workspace
 
 ### Q2 Developer Experience

@@ -18,6 +18,7 @@
 ## Evidence links
 
 - FluxRoute APIs and code: `internal/controlplane/service.go`, `internal/app/server.go`, `internal/trace/replay.go`
+- External benchmark report: `docs/benchmark-external-2026-02-23.md`
 - LangGraph docs: <https://langchain-ai.github.io/langgraph/>
 - Temporal workflows docs: <https://docs.temporal.io/workflows>
 - Inngest steps docs: <https://www.inngest.com/docs/learn/inngest-steps>

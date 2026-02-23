@@ -16,3 +16,8 @@ Method:
 5. Publish summary under `docs/benchmark-baseline-*.md`.
 
 See `docs/benchmark-baseline-2026-02-14.md` for the current internal baseline.
+
+Automated harness:
+- External runner script: `tests/bench/run_external_bench.sh`
+- Python harness: `tests/bench/external/bench_external.py`
+- Current published external report: `docs/benchmark-external-2026-02-23.md`

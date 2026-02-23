@@ -282,6 +282,7 @@ go run ./cmd/controlplane version
 - `docs/runbooks/billing-reconciliation.md`
 - `docs/competitive-proof.md`
 - `docs/benchmark-baseline-2026-02-14.md`
+- `docs/benchmark-external-2026-02-23.md`
 - `docs/sdk-quickstart.md`
 - `docs/release-checklist.md`
 - `docs/requirement-verification-2026-02-14.md`
