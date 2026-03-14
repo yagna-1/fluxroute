@@ -164,6 +164,13 @@ func RunManifestReport(manifestPath string) (report RunReport, retErr error) {
 		}
 	}
 
+	if _, err := trace.ExportAstraGraphAudit(execTrace, namespace); err != nil {
+		if envBool("ASTRAGRAPH_EXPORT_STRICT") {
+			return RunReport{}, fmt.Errorf("export astragraph audit: %w", err)
+		}
+		_, _ = fmt.Fprintf(os.Stderr, "fluxroute: warning: astragraph export failed: %v\n", err)
+	}
+
 	return RunReport{Results: results, Trace: execTrace, Metrics: metricRecorder.Snapshot(), Namespace: namespace}, nil
 }
 
@@ -326,6 +333,7 @@ func buildExecutionPlan(manifest config.Manifest, namespace string, defaultCB ag
 					Payload:   []byte(`{"message":"hello"}`),
 					Metadata: map[string]string{
 						"pipeline_step": step.Step,
+						"tool_name":     step.Step,
 						"namespace":     namespace,
 					},
 					Timestamp: time.Now(),
