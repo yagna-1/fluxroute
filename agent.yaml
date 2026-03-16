@@ -1,0 +1,30 @@
+name: fluxroute
+version: 1.0.0
+model: claude-sonnet-4-6
+
+identity:
+  policy_id: fluxroute-default
+  namespace: fluxroute
+  workflow_id_prefix: fr-
+
+tools:
+  - name: run-workflow
+    endpoint: http://localhost:18090/v1/run
+  - name: replay-trace
+    endpoint: http://localhost:18091/v1/replay
+
+skills:
+  - run
+  - replay
+  - validate
+  - scaffold
+
+hooks:
+  pre-run: hooks/pre-run.sh
+  post-run: hooks/post-run.sh
+
+memory:
+  path: memory/
+  auto_commit: true
+  commit_message: "agent: auto-commit {skill} trace at {timestamp}"
+  human_review: pr

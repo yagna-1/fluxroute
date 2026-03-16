@@ -1,0 +1,4 @@
+name: run
+description: Start FluxRoute router and execute workflows
+command: make run
+auto_commit_memory: true

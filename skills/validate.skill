@@ -1,0 +1,5 @@
+name: validate
+description: Validate manifests and contracts before dispatch
+command: make validate
+auto_commit_memory: true
+on_failure: hooks/on-failure.sh

@@ -1,0 +1,5 @@
+name: replay
+description: Replay finalized FluxRoute traces
+command: make replay
+auto_commit_memory: true
+produces: [memory/fluxroute-traces/]

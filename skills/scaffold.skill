@@ -1,0 +1,4 @@
+name: scaffold
+description: Scaffold new workflow manifest templates
+command: make scaffold
+auto_commit_memory: false
